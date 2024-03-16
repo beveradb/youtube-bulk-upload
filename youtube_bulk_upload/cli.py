@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import argparse
 import logging
 import pkg_resources
@@ -24,6 +25,7 @@ def main():
 
     log_level_help = "Optional: logging level, e.g. info, debug, warning (default: %(default)s). Example: --log_level=debug"
     dry_run_help = "Optional: Enable dry run mode to print actions without executing them (default: %(default)s). Example: -n or --dry_run"
+    source_directory_help = "Optional: Directory to load video files from for upload. Default: current directory"
     input_file_extensions_help = "Optional: File extensions to include in the upload. Default: %(default)s"
     noninteractive_help = (
         "Optional: Disable interactive prompt, will run fully automatically (will pring warning messages if needed). Default: %(default)s"
@@ -33,6 +35,7 @@ def main():
     general_group.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
     general_group.add_argument("--log_level", default="info", help=log_level_help)
     general_group.add_argument("--dry_run", "-n", action="store_true", help=dry_run_help)
+    general_group.add_argument("--source_directory", default=os.getcwd(), help=source_directory_help)
     general_group.add_argument("--input_file_extensions", nargs="+", default=[".mp4", ".mov"], help=input_file_extensions_help)
     general_group.add_argument("--noninteractive", default=False, action="store_true", help=noninteractive_help)
     general_group.add_argument("--upload_batch_limit", type=int, default=100, help=upload_batch_limit_help)
@@ -97,6 +100,7 @@ def main():
         log_level=log_level,
         dry_run=args.dry_run,
         interactive_prompt=not args.noninteractive,
+        source_directory=args.source_directory,
         input_file_extensions=args.input_file_extensions,
         upload_batch_limit=args.upload_batch_limit,
         youtube_client_secrets_file=args.yt_client_secrets_file,

@@ -20,6 +20,7 @@ class YouTubeBulkUpload:
         log_formatter=None,
         dry_run=False,
         interactive_prompt=True,
+        source_directory=os.getcwd(),
         input_file_extensions=[".mp4", ".mov"],
         upload_batch_limit=100,
         youtube_client_secrets_file=None,
@@ -49,7 +50,7 @@ class YouTubeBulkUpload:
         self.logger.addHandler(self.log_handler)
 
         self.logger.info(
-            f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, input_file_extensions: {input_file_extensions}"
+            f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
         )
         self.logger.info(
             f"youtube_client_secrets_file: {youtube_client_secrets_file}, youtube_description_template_file: {youtube_description_template_file}"
@@ -63,6 +64,7 @@ class YouTubeBulkUpload:
 
         self.dry_run = dry_run
 
+        self.source_directory = source_directory
         self.input_file_extensions = input_file_extensions
 
         self.youtube_client_secrets_file = youtube_client_secrets_file
@@ -88,7 +90,7 @@ class YouTubeBulkUpload:
     def find_input_files(self):
         self.logger.info(f"Finding input video files to upload...")
 
-        video_files = [f for f in os.listdir(".") if f.endswith(tuple(self.input_file_extensions))]
+        video_files = [f for f in os.listdir(self.source_directory) if f.endswith(tuple(self.input_file_extensions))]
         if not video_files:
             self.logger.error(f"No video files found in current directory to upload.")
             raise Exception(f"No video files found in current directory to upload.")

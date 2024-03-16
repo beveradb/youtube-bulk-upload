@@ -68,6 +68,7 @@ class YouTubeBulkUploaderGUI:
         self.log_level_var = tk.StringVar(value="info")
         self.dry_run_var = tk.BooleanVar()
         self.noninteractive_var = tk.BooleanVar()
+        self.source_directory_var = tk.StringVar()
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
         self.yt_category_id_var = tk.StringVar(value="10")
         self.yt_keywords_var = tk.StringVar(value="music")
@@ -158,6 +159,11 @@ class YouTubeBulkUploaderGUI:
             row=frame.row, column=1, sticky="w"
         )
 
+        frame.new_row()
+        tk.Label(self.general_frame, text="Source Directory:").grid(row=frame.row, column=0, sticky="w")
+        tk.Entry(self.general_frame, textvariable=self.source_directory_var).grid(row=frame.row, column=1, sticky="ew")
+        tk.Button(self.general_frame, text="Browse...", command=self.select_source_directory).grid(row=frame.row, column=2, sticky="ew")
+
         # YouTube Client Secrets File
         frame.new_row()
         tk.Label(self.general_frame, text="YouTube Client Secrets File:").grid(row=frame.row, column=0, sticky="w")
@@ -234,6 +240,7 @@ class YouTubeBulkUploaderGUI:
         log_level = self.log_level_var.get()
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()
+        source_directory = self.source_directory_var.get()
         yt_client_secrets_file = self.yt_client_secrets_file_var.get()
         yt_category_id = self.yt_category_id_var.get()
         yt_keywords = self.yt_keywords_var.get().split()
@@ -249,6 +256,7 @@ class YouTubeBulkUploaderGUI:
             log_level=log_level,
             dry_run=dry_run,
             interactive_prompt=not noninteractive,
+            source_directory=source_directory,
             youtube_client_secrets_file=yt_client_secrets_file,
             youtube_category_id=yt_category_id,
             youtube_keywords=yt_keywords,
@@ -268,6 +276,11 @@ class YouTubeBulkUploaderGUI:
         filename = filedialog.askopenfilename(title="Select Client Secrets File", filetypes=[("JSON files", "*.json")])
         if filename:
             self.yt_client_secrets_file_var.set(filename)
+
+    def select_source_directory(self):
+        directory = filedialog.askdirectory(title="Select Source Directory")
+        if directory:
+            self.source_directory_var.set(directory)
 
     def clear_log(self):
         self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing

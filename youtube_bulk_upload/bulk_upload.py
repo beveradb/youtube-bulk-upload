@@ -1,12 +1,8 @@
 import os
-import sys
 import json
 import tempfile
 import logging
-import zipfile
-import shutil
 import re
-import requests
 import pickle
 from thefuzz import fuzz
 from googleapiclient.discovery import build
@@ -268,8 +264,8 @@ class YouTubeBulkUpload:
 
         # Apply thumbnail filename replacements if set
         if self.thumbnail_filename_replacements is not None:
-            for find, replace in self.thumbnail_filename_replacements:
-                modified_filename = modified_filename.replace(find, replace)
+            for pattern, replacement in self.thumbnail_filename_replacements:
+                modified_filename = re.sub(pattern, replacement, modified_filename)
 
         # Test each file extension until a file is found
         for ext in self.thumbnail_filename_extensions:
@@ -301,8 +297,8 @@ class YouTubeBulkUpload:
 
         # Apply YouTube title replacements if set
         if self.youtube_title_replacements is not None:
-            for find, replace in self.youtube_title_replacements:
-                video_title = video_title.replace(find, replace)
+            for pattern, replacement in self.youtube_title_replacements:
+                video_title = re.sub(pattern, replacement, video_title)
 
         # Truncate title to the nearest whole word and add ellipsis if needed
         max_length = 95
@@ -323,10 +319,13 @@ class YouTubeBulkUpload:
                 description = file.read()
 
         if self.youtube_description_replacements is not None:
-            for find, replace in self.youtube_description_replacements:
-                if "{{youtube_title}}" in replace:
-                    replace = replace.replace("{{youtube_title}}", youtube_title)
-                description = description.replace(find, replace)
+            for pattern, replacement in self.youtube_description_replacements:
+
+                # Allow the user to use the jinja-ish syntax to refer to the youtube title in the replacement string
+                if "{{youtube_title}}" in replacement:
+                    replacement = replacement.replace("{{youtube_title}}", youtube_title)
+
+                description = re.sub(pattern, replacement, description)
 
         if not description and self.interactive_prompt:
             self.logger.warning(f"Unable to load YouTube description from file for video file: {video_file}...")

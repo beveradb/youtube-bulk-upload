@@ -48,12 +48,18 @@ class YouTubeBulkUpload:
         self.log_handler.setFormatter(self.log_formatter)
         self.logger.addHandler(self.log_handler)
 
-        self.logger.debug(f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, input_file_extensions: {input_file_extensions}")
-        self.logger.debug(
+        self.logger.info(
+            f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, input_file_extensions: {input_file_extensions}"
+        )
+        self.logger.info(
             f"youtube_client_secrets_file: {youtube_client_secrets_file}, youtube_description_template_file: {youtube_description_template_file}"
         )
-        self.logger.debug(f"youtube_title_replacements: {youtube_title_replacements}, youtube_title_prefix: {youtube_title_prefix}")
-        self.logger.debug(f"youtube_title_suffix: {youtube_title_suffix}, interactive_prompt: {interactive_prompt}")
+        self.logger.info(f"youtube_title_replacements: {youtube_title_replacements}, youtube_title_prefix: {youtube_title_prefix}")
+        self.logger.info(f"youtube_title_suffix: {youtube_title_suffix}")
+        self.logger.info(f"thumbnail_filename_prefix: {thumbnail_filename_prefix}, thumbnail_filename_suffix: {thumbnail_filename_suffix}")
+        self.logger.info(
+            f"thumbnail_filename_replacements: {thumbnail_filename_replacements}, thumbnail_filename_extensions: {thumbnail_filename_extensions}"
+        )
 
         self.dry_run = dry_run
 
@@ -122,10 +128,13 @@ class YouTubeBulkUpload:
             if not os.path.isfile(self.youtube_description_template_file):
                 raise Exception(f"YouTube description file does not exist: {self.youtube_description_template_file}")
 
+            self.logger.info(f"YouTube description template file exists: {self.youtube_description_template_file}")
+
         # Test parsing the file as JSON to check it's valid
         try:
             with open(self.youtube_client_secrets_file, "r") as f:
                 json.load(f)
+                self.logger.info(f"YouTube client secrets file is valid JSON: {self.youtube_client_secrets_file}")
         except json.JSONDecodeError as e:
             raise Exception(f"YouTube client secrets file is not valid JSON: {self.youtube_client_secrets_file}") from e
 

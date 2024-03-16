@@ -25,14 +25,16 @@ def main():
     log_level_help = "Optional: logging level, e.g. info, debug, warning (default: %(default)s). Example: --log_level=debug"
     dry_run_help = "Optional: Enable dry run mode to print actions without executing them (default: %(default)s). Example: -n or --dry_run"
     input_file_extensions_help = "Optional: File extensions to include in the upload. Default: %(default)s"
-    interactive_prompt_help = "Optional: Enable interactive prompt mode. Default: %(default)s"
+    noninteractive_help = (
+        "Optional: Disable interactive prompt, will run fully automatically (will pring warning messages if needed). Default: %(default)s"
+    )
     upload_batch_limit_help = "Optional: Limit for the number of videos to upload in a batch. Default: %(default)s"
 
     general_group.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
     general_group.add_argument("--log_level", default="info", help=log_level_help)
     general_group.add_argument("--dry_run", "-n", action="store_true", help=dry_run_help)
     general_group.add_argument("--input_file_extensions", nargs="+", default=[".mp4", ".mov"], help=input_file_extensions_help)
-    general_group.add_argument("--interactive_prompt", action="store_true", default=True, help=interactive_prompt_help)
+    general_group.add_argument("--noninteractive", default=False, action="store_true", help=noninteractive_help)
     general_group.add_argument("--upload_batch_limit", type=int, default=100, help=upload_batch_limit_help)
 
     # YouTube Options
@@ -57,11 +59,11 @@ def main():
     yt_title_suffix_help = "Optional: Suffix for YouTube video titles."
     yt_title_replacements_help = "Optional: Pairs for replacing text in the titles. Example: --yt_title_replacements find1 replace1"
 
-    yt_group.add_argument("--yt_client_secrets_file", required=True, help=yt_client_secrets_file_help)
+    yt_group.add_argument("--yt_client_secrets_file", default="client_secret.json", help=yt_client_secrets_file_help)
     yt_group.add_argument("--yt_category_id", default="10", help=yt_category_id_help)
     yt_group.add_argument("--yt_keywords", nargs="+", default=["music"], help=yt_keywords_help)
 
-    yt_group.add_argument("--yt_desc_template_file", default=None, help=yt_desc_template_file_help)
+    yt_group.add_argument("--yt_desc_template_file", default="description_template.txt", help=yt_desc_template_file_help)
     yt_group.add_argument("--yt_desc_replacements", nargs="+", action="append", help=yt_desc_replacements_help)
 
     yt_group.add_argument("--yt_title_prefix", default=None, help=yt_title_prefix_help)
@@ -94,7 +96,7 @@ def main():
         log_formatter=log_formatter,
         log_level=log_level,
         dry_run=args.dry_run,
-        interactive_prompt=args.interactive_prompt,
+        interactive_prompt=not args.noninteractive,
         input_file_extensions=args.input_file_extensions,
         upload_batch_limit=args.upload_batch_limit,
         youtube_client_secrets_file=args.yt_client_secrets_file,
@@ -117,8 +119,8 @@ def main():
         logger.error(f"An error occurred during bulk upload, see stack trace below: {str(e)}")
         raise e
 
-    logger.info(f"YouTube Bulk Upload processing complete! Videos uploaded to YouTube:")
-    logger.info(f"")
+    logger.info(f"YouTube Bulk Upload processing complete! Videos uploaded to YouTube: {len(uploaded_videos)}")
+
     for video in uploaded_videos:
         logger.info(f"Input Filename: {video['input_filename']} - YouTube Title: {video['youtube_title']} - URL: {video['youtube_url']}")
 

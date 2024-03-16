@@ -1,6 +1,8 @@
 # Test files
 *.mp4
 *.mov
+*client_secret.json
+*description_template.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

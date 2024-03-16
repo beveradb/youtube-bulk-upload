@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "youtube-bulk-upload"
+version = "0.1.0"
+description = "Upload all videos in a folder to youtube, e.g. to help re-populate an unfairly terminated channel"
+authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "youtube_bulk_upload" }]
+homepage = "https://github.com/beveradb/youtube-bulk-upload"
+repository = "https://github.com/beveradb/youtube-bulk-upload"
+documentation = "https://github.com/beveradb/youtube-bulk-upload/blob/main/README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+requests = ">=2"
+google-api-python-client = "*"
+google-auth = "*"
+google-auth-oauthlib = "*"
+google-auth-httplib2 = "*"
+thefuzz = ">=0.22"
+
+[tool.poetry.group.dev.dependencies]
+black = ">=23"
+poetry = "*"
+
+[tool.poetry.scripts]
+youtube-bulk-upload = 'youtube_bulk_upload.cli:main'
+
+[tool.black]
+line-length = 140
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -203,7 +203,7 @@ class YouTubeBulkUpload:
                         return found_id
 
         self.logger.info(f"No matching video found with title: {youtube_title}, continuing with upload.")
-        return False
+        return None
 
     def truncate_to_nearest_word(self, title, max_length):
         if len(title) <= max_length:
@@ -329,7 +329,8 @@ class YouTubeBulkUpload:
                 description = description.replace(find, replace)
 
         if not description and self.interactive_prompt:
-            description = input("No description template found. Please type the description you would like to use: ")
+            self.logger.warning(f"Unable to load YouTube description from file for video file: {video_file}...")
+            description = input("No description template file found. Please type the description you would like to use: ")
 
         return description
 

@@ -1,9 +1,12 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
-from youtube_bulk_upload import YouTubeBulkUpload
+import os
 import logging
 import threading
-import pkg_resources  # Make sure to import pkg_resources
+import pkg_resources
+
+import tkinter as tk
+from tkinter import filedialog, messagebox, scrolledtext
+
+from youtube_bulk_upload import YouTubeBulkUpload
 
 
 class ReusableWidgetFrame(tk.LabelFrame):
@@ -68,7 +71,7 @@ class YouTubeBulkUploaderGUI:
         self.log_level_var = tk.StringVar(value="info")
         self.dry_run_var = tk.BooleanVar()
         self.noninteractive_var = tk.BooleanVar()
-        self.source_directory_var = tk.StringVar()
+        self.source_directory_var = tk.StringVar(value=os.path.expanduser("~"))
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
         self.yt_category_id_var = tk.StringVar(value="10")
         self.yt_keywords_var = tk.StringVar(value="music")
@@ -237,7 +240,7 @@ class YouTubeBulkUploaderGUI:
 
     def run_upload(self):
         # Collect values from GUI
-        log_level = self.log_level_var.get()
+        log_level_str = self.log_level_var.get()
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()
         source_directory = self.source_directory_var.get()
@@ -250,6 +253,9 @@ class YouTubeBulkUploaderGUI:
         thumb_file_prefix = self.thumb_file_prefix_var.get()
         thumb_file_suffix = self.thumb_file_suffix_var.get()
         thumb_file_extensions = self.thumb_file_extensions_var.get().split()
+
+        # Convert log level from string to logging module constant
+        log_level = getattr(logging, log_level_str.upper(), logging.INFO)
 
         # Initialize YouTubeBulkUpload with collected parameters
         youtube_bulk_upload = YouTubeBulkUpload(
@@ -290,13 +296,10 @@ class YouTubeBulkUploaderGUI:
     def threaded_upload(self, youtube_bulk_upload):
         try:
             uploaded_videos = youtube_bulk_upload.process()
-            messagebox.showinfo("Success", f"Upload complete! Videos uploaded: {len(uploaded_videos)}")
+            self.root.after(0, lambda: messagebox.showinfo("Success", f"Upload complete! Videos uploaded: {len(uploaded_videos)}"))
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
-        finally:
-            self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing
-            self.log_output.insert(tk.END, f"Upload process completed with {len(uploaded_videos)} videos uploaded.\n")
-            self.log_output.config(state=tk.DISABLED)  # Disable text widget after updating
+            logging.error(f"An error occurred: {str(e)}")
+            self.root.after(0, lambda: messagebox.showerror("Error", f"An error occurred: {str(e)}"))
 
 
 class TextHandler(logging.Handler):

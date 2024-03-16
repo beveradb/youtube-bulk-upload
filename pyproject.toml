@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "youtube-bulk-upload"
-version = "0.1.1"
+version = "0.2.0"
 description = "Upload all videos in a folder to youtube, e.g. to help re-populate an unfairly terminated channel"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -22,9 +22,11 @@ thefuzz = ">=0.22"
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
 poetry = "*"
+pyinstaller = "*"
 
 [tool.poetry.scripts]
 youtube-bulk-upload = 'youtube_bulk_upload.cli:main'
+youtube-bulk-upload-gui = 'youtube_bulk_upload.gui:main'
 
 [tool.black]
 line-length = 140

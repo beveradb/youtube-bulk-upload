@@ -117,11 +117,14 @@ class YouTubeBulkUpload:
         self.logger.info(f"Current directory to process: {current_directory}")
 
         # Enable youtube upload if client secrets file is provided and is valid JSON
-        if not os.path.isfile(self.youtube_client_secrets_file):
+        if self.youtube_client_secrets_file is None or not os.path.isfile(self.youtube_client_secrets_file):
             raise Exception(f"YouTube client secrets file does not exist: {self.youtube_client_secrets_file}")
 
-        if not os.path.isfile(self.youtube_description_template_file):
-            raise Exception(f"YouTube description file does not exist: {self.youtube_description_template_file}")
+        if self.youtube_description_template_file is None:
+            self.logger.warn("No YouTube description template file provided. Description will be empty unless entered interactively.")
+        else:
+            if not os.path.isfile(self.youtube_description_template_file):
+                raise Exception(f"YouTube description file does not exist: {self.youtube_description_template_file}")
 
         # Test parsing the file as JSON to check it's valid
         try:

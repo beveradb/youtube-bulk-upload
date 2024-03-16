@@ -2,8 +2,6 @@
 import argparse
 import logging
 import pkg_resources
-import os
-import sys
 from youtube_bulk_upload import YouTubeBulkUpload
 
 
@@ -40,7 +38,7 @@ def main():
     # YouTube Options
     youtube_group = parser.add_argument_group("YouTube Options")
 
-    youtube_client_secrets_file_help = "Optional: File path to youtube client secrets file. Example: --youtube_client_secrets_file='/path/to/client_secret_1234567890_apps.googleusercontent.com.json'"
+    youtube_client_secrets_file_help = "Mandatory: File path to youtube client secrets file. Example: --youtube_client_secrets_file='/path/to/client_secret_1234567890_apps.googleusercontent.com.json'"
     youtube_category_id_help = "Optional: YouTube category ID for uploaded videos. Default: %(default)s (Music)"
     youtube_keywords_help = "Optional: Keywords for YouTube video, separated by spaces. Default: %(default)s. Example: --youtube_keywords keyword1 keyword2 keyword3"
 
@@ -51,7 +49,7 @@ def main():
     youtube_title_suffix_help = "Optional: Suffix for YouTube video titles."
     youtube_title_replacements_help = "Optional: Pairs for replacing text in the YouTube video titles. Example: --youtube_title_replacements placeholder1 replacement1 placeholder2 replacement2"
 
-    youtube_group.add_argument("--youtube_client_secrets_file", default=None, help=youtube_client_secrets_file_help)
+    youtube_group.add_argument("--youtube_client_secrets_file", required=True, help=youtube_client_secrets_file_help)
     youtube_group.add_argument("--youtube_category_id", default="10", help=youtube_category_id_help)
     youtube_group.add_argument("--youtube_keywords", nargs="+", default=["music"], help=youtube_keywords_help)
 

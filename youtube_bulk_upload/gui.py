@@ -8,6 +8,8 @@ import pkg_resources  # Make sure to import pkg_resources
 
 class ReusableWidgetFrame(tk.LabelFrame):
     def __init__(self, parent, title, **kwargs):
+        kwargs.setdefault("padx", 10)  # Add default padding on the x-axis
+        kwargs.setdefault("pady", 10)  # Add default padding on the y-axis
         super().__init__(parent, text=title, **kwargs)
         self.find_var = tk.StringVar()
         self.replace_var = tk.StringVar()
@@ -24,6 +26,14 @@ class ReusableWidgetFrame(tk.LabelFrame):
     def add_find_replace_widgets(self, label_text):
         tk.Label(self, text=label_text).grid(row=self.row, column=0, sticky="w")
 
+        # Listbox with a scrollbar for replacements
+        self.row += 1
+        self.replacements_listbox = tk.Listbox(self, height=4, width=50)
+        scrollbar = tk.Scrollbar(self, orient="vertical", command=self.replacements_listbox.yview)
+        self.replacements_listbox.config(yscrollcommand=scrollbar.set)
+        self.replacements_listbox.grid(row=self.row, column=0, columnspan=2, sticky="nsew", padx=(5, 0), pady=5)
+        scrollbar.grid(row=self.row, column=2, sticky="ns", pady=5)
+
         # Entry fields for adding new find/replace pairs
         self.row += 1
         tk.Entry(self, textvariable=self.find_var, width=20).grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=(5, 0))
@@ -35,14 +45,6 @@ class ReusableWidgetFrame(tk.LabelFrame):
         add_button.grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=5)
         remove_button = tk.Button(self, text="Remove Selected", command=self.remove_replacement)
         remove_button.grid(row=self.row, column=1, sticky="ew", pady=5)
-
-        # Listbox with a scrollbar for replacements
-        self.row += 1
-        self.replacements_listbox = tk.Listbox(self, height=4, width=50)
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=self.replacements_listbox.yview)
-        self.replacements_listbox.config(yscrollcommand=scrollbar.set)
-        self.replacements_listbox.grid(row=self.row, column=0, columnspan=2, sticky="nsew", padx=(5, 0), pady=5)
-        scrollbar.grid(row=self.row, column=2, sticky="ns", pady=5)
 
     def add_replacement(self):
         find_text = self.find_var.get()
@@ -78,6 +80,9 @@ class YouTubeBulkUploaderGUI:
 
         self.row = 0
         self.setup_ui()
+
+        self.root.update()  # Ensure the window is updated with the latest UI changes
+        self.root.minsize(self.root.winfo_width(), self.root.winfo_height())
 
     def setup_ui(self):
         # Fetch the package version

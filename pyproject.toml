@@ -19,11 +19,11 @@ google-auth-oauthlib = "*"
 google-auth-httplib2 = "*"
 thefuzz = ">=0.22"
 pillow = ">=10"
+pyinstaller = "*"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
 poetry = "*"
-pyinstaller = "*"
 
 [tool.poetry.scripts]
 youtube-bulk-upload = 'youtube_bulk_upload.cli:main'

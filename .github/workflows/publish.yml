@@ -39,7 +39,7 @@ jobs:
           echo "APPVERSION=$(youtube-bulk-upload --version | awk '{print $NF}')" >> $GITHUB_ENV
           echo "Extracted APPVERSION=${{ env.APPVERSION }}"
 
-          - name: Build application with PyInstaller
+      - name: Build application with PyInstaller
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name="YouTube Bulk Upload" youtube_bulk_upload/gui.py
 

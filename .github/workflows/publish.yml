@@ -60,7 +60,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: YouTubeBulkUpload-${{ runner.os }}-${{ env.ARCHITECTURE }}-${{ github.run_number }}
+          name: YouTubeBulkUpload-${{ runner.os }}-${{ env.ARCHITECTURE }}-v${{ env.APPVERSION }}
           path: |
             dist/YouTube Bulk Upload.exe
             dist/YouTube Bulk Upload ${{ env.APPVERSION }}.dmg

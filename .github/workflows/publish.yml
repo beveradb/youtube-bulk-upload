@@ -27,7 +27,7 @@ jobs:
         run: poetry install
 
       - name: Install PyInstaller
-        run: pip install pyinstaller
+        run: pip install pyinstaller pillow
 
       - name: Build application with PyInstaller
         run: |

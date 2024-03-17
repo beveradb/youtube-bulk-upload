@@ -39,10 +39,13 @@ jobs:
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name=YouTubeBulkUpload youtube_bulk_upload/gui.py
 
+      - name: Extract architecture
+        run: echo "ARCHITECTURE=$(echo '${{ matrix.settings.args }}' | cut -d' ' -f2 | cut -d'-' -f1)" >> $GITHUB_ENV
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: YouTubeBulkUpload-${{ runner.os }}-${{ matrix.settings.args.split(' ')[1] }}-${{ github.run_number }}
+          name: YouTubeBulkUpload-${{ runner.os }}-${{ env.ARCHITECTURE }}-${{ github.run_number }}
           path: |
             dist/YouTubeBulkUpload*.app
             dist/YouTubeBulkUpload*.exe

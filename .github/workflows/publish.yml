@@ -46,7 +46,7 @@ jobs:
       # Create DMG (Only for macOS)
       - name: Create DMG
         if: startsWith(matrix.settings.platform, 'macos')
-        run: create-dmg 'dist/YouTubeBulkUpload.app' --dmg-title="YouTubeBulkUpload"
+        run: create-dmg 'dist/YouTubeBulkUpload.app' --dmg-title="YouTubeBulkUpload" --identity='Apple Development'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

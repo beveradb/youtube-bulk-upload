@@ -32,16 +32,21 @@ jobs:
         run: pip install .
 
       - name: Extract architecture
-        run: echo "ARCHITECTURE=$(echo '${{ matrix.settings.args }}' | cut -d' ' -f2 | cut -d'-' -f1)" >> $GITHUB_ENV
+        run: |
+          python -c "import os; arch = '${{ matrix.settings.args }}'.split(' ')[1].split('-')[0]; os.system(f'echo ARCHITECTURE={arch} >> $GITHUB_ENV')"
 
       - name: Extract and print app version
         run: |
-          echo "APPVERSION=$(youtube-bulk-upload --version | awk '{print $NF}')" >> $GITHUB_ENV
+          python -c "import subprocess; print('APPVERSION=' + subprocess.run(['youtube-bulk-upload', '--version'], capture_output=True).stdout.decode().strip().split()[-1])" >> $GITHUB_ENV
           echo "Extracted APPVERSION=${{ env.APPVERSION }}"
 
       - name: Build application with PyInstaller
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name="YouTube Bulk Upload" youtube_bulk_upload/gui.py
+
+      - name: Rename Windows executable
+        if: startsWith(matrix.settings.platform, 'windows')
+        run: mv dist/YouTube\ Bulk\ Upload.exe dist/YouTube\ Bulk\ Upload\ ${{ env.APPVERSION }}.exe
 
       # Install create-dmg (Only for macOS)
       - name: Install create-dmg
@@ -62,7 +67,7 @@ jobs:
         with:
           name: YouTubeBulkUpload-${{ runner.os }}-${{ env.ARCHITECTURE }}-v${{ env.APPVERSION }}
           path: |
-            dist/YouTube Bulk Upload.exe
+            dist/YouTube Bulk Upload ${{ env.APPVERSION }}.exe
             dist/YouTube Bulk Upload ${{ env.APPVERSION }}.dmg
 
   # Auto-publish when version is increased

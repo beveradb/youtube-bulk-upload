@@ -42,7 +42,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: YouTubeBulkUpload-${{ runner.os }}
+          name: YouTubeBulkUpload-${{ runner.os }}-${{ matrix.settings.args.split(' ')[1] }}-${{ github.run_number }}
           path: |
             dist/YouTubeBulkUpload*.app
             dist/YouTubeBulkUpload*.exe

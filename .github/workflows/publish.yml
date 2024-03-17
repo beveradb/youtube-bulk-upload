@@ -34,10 +34,12 @@ jobs:
       - name: Extract architecture
         run: echo "ARCHITECTURE=$(echo '${{ matrix.settings.args }}' | cut -d' ' -f2 | cut -d'-' -f1)" >> $GITHUB_ENV
 
-      - name: Extract app version
-        run: echo "APPVERSION=$(grep '^version' pyproject.toml | head -n 1 | cut -d'\"' -f2)" >> $GITHUB_ENV
+      - name: Extract and print app version
+        run: |
+          echo "APPVERSION=$(youtube-bulk-upload --version | awk '{print $NF}')" >> $GITHUB_ENV
+          echo "Extracted APPVERSION=${{ env.APPVERSION }}"
 
-      - name: Build application with PyInstaller
+          - name: Build application with PyInstaller
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name="YouTube Bulk Upload" youtube_bulk_upload/gui.py
 

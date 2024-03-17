@@ -113,7 +113,7 @@ class YouTubeBulkUpload:
     def prompt_user_bool(self, prompt_message, allow_empty=False):
 
         if self.custom_prompt_function is not None:
-            return self.custom_prompt_function(prompt_message, allow_empty)
+            return self.custom_prompt_function(prompt_message=prompt_message, allow_empty=allow_empty)
         else:
             options_string = "[y]/n" if allow_empty else "y/[n]"
             accept_responses = ["y", "yes"]

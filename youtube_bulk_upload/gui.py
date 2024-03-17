@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import threading
 import pkg_resources
@@ -87,7 +88,7 @@ class YouTubeBulkUploaderGUI:
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
         self.yt_category_id_var = tk.StringVar(value="10")
         self.yt_keywords_var = tk.StringVar(value="music")
-        self.yt_desc_template_file_var = tk.StringVar(value="description_template.txt")
+        self.yt_desc_template_file_var = tk.StringVar()
         self.yt_title_prefix_var = tk.StringVar()
         self.yt_title_suffix_var = tk.StringVar()
         self.thumb_file_prefix_var = tk.StringVar()
@@ -235,7 +236,12 @@ class YouTubeBulkUploaderGUI:
     def add_youtube_description_widgets(self):
         frame = self.youtube_desc_frame
         tk.Label(self.youtube_desc_frame, text="Template File:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.youtube_desc_frame, textvariable=self.yt_desc_template_file_var).grid(row=frame.row, column=1, sticky="ew")
+        tk.Entry(self.youtube_desc_frame, textvariable=self.yt_desc_template_file_var, state="readonly").grid(
+            row=frame.row, column=1, sticky="ew"
+        )
+        tk.Button(self.youtube_desc_frame, text="Browse...", command=self.select_yt_desc_template_file).grid(
+            row=frame.row, column=2, sticky="ew"
+        )
 
         frame.new_row()
         self.youtube_desc_frame.add_find_replace_widgets("Find / Replace Patterns:")
@@ -264,7 +270,7 @@ class YouTubeBulkUploaderGUI:
 
         self.logger.addHandler(self.log_handler_textbox)
 
-    def custom_prompt_function(prompt_message, allow_empty):
+    def custom_prompt_function(self, prompt_message, allow_empty):
         response = messagebox.askyesno("Confirm", f"{prompt_message}")
 
         return response
@@ -331,6 +337,12 @@ class YouTubeBulkUploaderGUI:
         if directory:
             self.source_directory_var.set(directory)
 
+    def select_yt_desc_template_file(self):
+        self.logger.debug("Selecting YouTube description template file")
+        filename = filedialog.askopenfilename(title="Select YouTube Description Template File", filetypes=[("Text files", "*.txt")])
+        if filename:
+            self.yt_desc_template_file_var.set(filename)
+
     def clear_log(self):
         self.logger.debug("Clearing log output")
         self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing
@@ -354,6 +366,10 @@ class TextHandler(logging.Handler):
 
 
 def main():
+    home_dir = os.path.expanduser("~")
+    sys.stdout = open(os.path.join(home_dir, "youtube_bulk_upload_stdout.log"), "w")
+    sys.stderr = open(os.path.join(home_dir, "youtube_bulk_upload_stderr.log"), "w")
+
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
@@ -361,21 +377,28 @@ def main():
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
-
     logger.addHandler(console_handler)
+
+    file_handler = logging.FileHandler(os.path.join(home_dir, "youtube_bulk_upload.log"))
+    file_handler.setFormatter(log_formatter)
+    logger.addHandler(file_handler)
 
     logger.info("Initializing YouTubeBulkUploaderGUI class")
     gui_root = tk.Tk()
 
-    # Set application icon
-    icon_path = os.path.join(os.path.dirname(__file__), "logo.png")
-    icon_image = tk.PhotoImage(file=icon_path)
-    gui_root.iconphoto(False, icon_image)
+    try:
+        app = YouTubeBulkUploaderGUI(gui_root, logger)
 
-    app = YouTubeBulkUploaderGUI(gui_root, logger)
+        logger.debug("Starting main GUI loop")
+        gui_root.mainloop()
+    except Exception as e:
+        logger.error(str(e))
 
-    logger.debug("Starting main GUI loop")
-    gui_root.mainloop()
+        with open("youtube_bulk_upload_error.log", "w") as f:
+            f.write(str(e))
+
+        # Pass the error_message variable to the lambda function
+        gui_root.after(0, lambda msg=str(e): messagebox.showerror("Error", msg))
 
 
 if __name__ == "__main__":

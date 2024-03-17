@@ -3,6 +3,41 @@ name: Auto-publish
 on: [push, workflow_dispatch]
 
 jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      # Configured following guide at:
+      # https://github.com/actions/setup-python/blob/main/docs/advanced-usage.md#caching-packages
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "poetry" # caching dependencies from poetry.lock
+
+      - name: Install Poetry dependencies (CPU)
+        run: poetry install
+
+      - name: Build application with PyInstaller
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name=YouTubeBulkUpload youtube_bulk_upload/gui.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTubeBulkUpload-${{ runner.os }}
+          path: |
+            dist/YouTubeBulkUpload*.app
+            dist/YouTubeBulkUpload*.exe
+
   # Auto-publish when version is increased
   publish-pypi:
     # Only publish on `main` branch

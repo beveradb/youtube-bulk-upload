@@ -31,18 +31,12 @@ jobs:
       - name: Install project and dependencies
         run: pip install .
 
-      - name: Extract architecture
-        run: |
-          python -c "import os; arch = '${{ matrix.settings.args }}'.split(' ')[1].split('-')[0]; os.system(f'echo ARCHITECTURE={arch} >> $GITHUB_ENV')"
-
-      - name: Extract and print app version
-        run: |
-          python -c "import subprocess; print('APPVERSION=' + subprocess.run(['youtube-bulk-upload', '--version'], capture_output=True).stdout.decode().strip().split()[-1])" >> $GITHUB_ENV
-          echo "Extracted APPVERSION=${{ env.APPVERSION }}"
+      - name: Setup env vars with app name, version, architecture and operating system
+        run: python .github/set_github_vars.py
 
       - name: Build application with PyInstaller
         run: |
-          pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name="YouTube Bulk Upload v${{ env.APPVERSION }}" youtube_bulk_upload/gui.py
+          pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name="${{ env.APPNAMEWITHDETAILS }}" youtube_bulk_upload/gui.py
 
       # Install create-dmg (Only for macOS)
       - name: Install create-dmg
@@ -56,15 +50,19 @@ jobs:
 
       - name: Create DMG
         if: startsWith(matrix.settings.platform, 'macos')
-        run: create-dmg 'dist/YouTube Bulk Upload.app' --dmg-title="YouTube Bulk Upload" dist || true
+        run: create-dmg "dist/${{ env.APPNAMEWITHDETAILS }}.app" --dmg-title="${{ env.APPNAME }}" dist || true
+
+      - name: Remove duplicate version from DMG filename
+        if: startsWith(matrix.settings.platform, 'macos')
+        run: mv "dist/${{ env.APPNAMEWITHDETAILS }} ${{ env.APPVERSION }}.dmg" "dist/${{ env.APPNAMEWITHDETAILS }}.dmg"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: YouTubeBulkUpload-${{ runner.os }}-${{ env.ARCHITECTURE }}-v${{ env.APPVERSION }}
+          name: ${{ env.APPNAMEWITHDETAILS }}
           path: |
-            dist/YouTube Bulk Upload v${{ env.APPVERSION }}.exe
-            dist/YouTube Bulk Upload v${{ env.APPVERSION }}.dmg
+            dist/${{ env.APPNAMEWITHDETAILS }}.exe
+            dist/${{ env.APPNAMEWITHDETAILS }}.dmg
 
   # Auto-publish when version is increased
   publish-pypi:

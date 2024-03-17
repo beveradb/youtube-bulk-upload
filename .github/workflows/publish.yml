@@ -26,6 +26,9 @@ jobs:
       - name: Install Poetry dependencies (CPU)
         run: poetry install
 
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
       - name: Build application with PyInstaller
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --name=YouTubeBulkUpload youtube_bulk_upload/gui.py

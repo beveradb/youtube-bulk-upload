@@ -96,8 +96,7 @@ def main():
     logger.info(f"YouTubeBulkUpload CLI beginning initialisation...")
 
     youtube_bulk_upload = YouTubeBulkUpload(
-        log_formatter=log_formatter,
-        log_level=log_level,
+        logger=logger,
         dry_run=args.dry_run,
         interactive_prompt=not args.noninteractive,
         source_directory=args.source_directory,

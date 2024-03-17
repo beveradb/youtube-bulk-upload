@@ -16,10 +16,12 @@ YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v="
 class YouTubeBulkUpload:
     def __init__(
         self,
+        logger=None,
         log_level=logging.DEBUG,
         log_formatter=None,
         dry_run=False,
         interactive_prompt=True,
+        custom_prompt_function=None,
         source_directory=os.getcwd(),
         input_file_extensions=[".mp4", ".mov"],
         upload_batch_limit=100,
@@ -36,18 +38,21 @@ class YouTubeBulkUpload:
         thumbnail_filename_replacements=None,
         thumbnail_filename_extensions=[".png", ".jpg", ".jpeg"],
     ):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(log_level)
-        self.log_level = log_level
-        self.log_formatter = log_formatter
+        self.logger = logger
 
-        self.log_handler = logging.StreamHandler()
+        if self.logger is None:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(log_level)
+            self.log_level = log_level
+            self.log_formatter = log_formatter
 
-        if self.log_formatter is None:
-            self.log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+            self.log_handler = logging.StreamHandler()
 
-        self.log_handler.setFormatter(self.log_formatter)
-        self.logger.addHandler(self.log_handler)
+            if self.log_formatter is None:
+                self.log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+
+            self.log_handler.setFormatter(self.log_formatter)
+            self.logger.addHandler(self.log_handler)
 
         self.logger.info(
             f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
@@ -66,6 +71,7 @@ class YouTubeBulkUpload:
 
         self.source_directory = source_directory
         self.input_file_extensions = input_file_extensions
+        self.custom_prompt_function = custom_prompt_function
 
         self.youtube_client_secrets_file = youtube_client_secrets_file
 
@@ -105,14 +111,18 @@ class YouTubeBulkUpload:
             raise Exception(exit_message)
 
     def prompt_user_bool(self, prompt_message, allow_empty=False):
-        options_string = "[y]/n" if allow_empty else "y/[n]"
-        accept_responses = ["y", "yes"]
-        if allow_empty:
-            accept_responses.append("")
 
-        print()
-        response = input(f"{prompt_message} {options_string} ").strip().lower()
-        return response in accept_responses
+        if self.custom_prompt_function is not None:
+            return self.custom_prompt_function(prompt_message, allow_empty)
+        else:
+            options_string = "[y]/n" if allow_empty else "y/[n]"
+            accept_responses = ["y", "yes"]
+            if allow_empty:
+                accept_responses.append("")
+
+            print()
+            response = input(f"{prompt_message} {options_string} ")
+            return response.strip().lower() in accept_responses
 
     def validate_input_parameters(self):
         self.logger.info(f"Validating input parameters for enabled features...")

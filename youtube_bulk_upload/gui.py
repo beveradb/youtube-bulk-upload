@@ -10,7 +10,9 @@ from youtube_bulk_upload import YouTubeBulkUpload
 
 
 class ReusableWidgetFrame(tk.LabelFrame):
-    def __init__(self, parent, title, **kwargs):
+    def __init__(self, parent, logger, title, **kwargs):
+        self.logger = logger
+        self.logger.debug(f"Initializing ReusableWidgetFrame with title: {title}")
         kwargs.setdefault("padx", 10)  # Add default padding on the x-axis
         kwargs.setdefault("pady", 10)  # Add default padding on the y-axis
         super().__init__(parent, text=title, **kwargs)
@@ -19,14 +21,17 @@ class ReusableWidgetFrame(tk.LabelFrame):
         self.row = 0  # Keep track of the next row index to add widgets
 
     def new_row(self):
+        self.logger.debug("Adding a new row in ReusableWidgetFrame")
         self.row += 1
 
     def add_widgets(self, widgets):
+        self.logger.debug(f"Adding widgets: {widgets}")
         for widget in widgets:
             widget.grid(row=self.row, column=0, columnspan=2, sticky="ew", padx=5, pady=2)
             self.row += 1
 
     def add_find_replace_widgets(self, label_text):
+        self.logger.debug(f"Adding find/replace widgets with label: {label_text}")
         tk.Label(self, text=label_text).grid(row=self.row, column=0, sticky="w")
 
         # Listbox with a scrollbar for replacements
@@ -50,6 +55,7 @@ class ReusableWidgetFrame(tk.LabelFrame):
         remove_button.grid(row=self.row, column=1, sticky="ew", pady=5)
 
     def add_replacement(self):
+        self.logger.debug("Adding a replacement")
         find_text = self.find_var.get()
         replace_text = self.replace_var.get()
         if find_text and replace_text:
@@ -58,17 +64,23 @@ class ReusableWidgetFrame(tk.LabelFrame):
             self.replace_var.set("")
 
     def remove_replacement(self):
+        self.logger.debug("Removing selected replacements")
         selected_indices = self.replacements_listbox.curselection()
         for i in reversed(selected_indices):
             self.replacements_listbox.delete(i)
 
 
 class YouTubeBulkUploaderGUI:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, gui_root, logger):
+        self.logger = logger
+        self.logger.debug("Initializing YouTubeBulkUploaderGUI")
+        self.gui_root = gui_root
 
         # Define variables for inputs
+        self.log_level = logging.DEBUG
         self.log_level_var = tk.StringVar(value="info")
+        self.log_level_var.trace("w", self.on_log_level_change)
+
         self.dry_run_var = tk.BooleanVar()
         self.noninteractive_var = tk.BooleanVar()
         self.source_directory_var = tk.StringVar(value=os.path.expanduser("~"))
@@ -82,32 +94,48 @@ class YouTubeBulkUploaderGUI:
         self.thumb_file_suffix_var = tk.StringVar()
         self.thumb_file_extensions_var = tk.StringVar(value=".png .jpg .jpeg")
 
-        self.row = 0
         self.setup_ui()
 
-        self.root.update()  # Ensure the window is updated with the latest UI changes
-        self.root.minsize(self.root.winfo_width(), self.root.winfo_height())
+        # Add logging to text box UI element
+        self.add_textbox_log_handler()
+
+        self.gui_root.update()  # Ensure the window is updated with the latest UI changes
+        self.gui_root.minsize(self.gui_root.winfo_width(), self.gui_root.winfo_height())
+
+        self.logger.info("YouTubeBulkUploaderGUI Initialized")
+
+    def on_log_level_change(self, *args):
+        self.logger.debug(f"Log level changed to: {self.log_level_var.get()}")
+
+        # Get log level string value from GUI
+        log_level_str = self.log_level_var.get()
+        # Convert log level from string to logging module constant
+        self.log_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
+
+        self.logger.setLevel(self.log_level)
 
     def setup_ui(self):
+        self.logger.debug("Setting up UI")
+        self.row = 0
         # Fetch the package version
         package_version = pkg_resources.get_distribution("youtube-bulk-upload").version
-        self.root.title(f"YouTube Bulk Upload - v{package_version}")
+        self.gui_root.title(f"YouTube Bulk Upload - v{package_version}")
 
         # Configure the grid layout to allow frames to resize properly
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_rowconfigure(1, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_columnconfigure(1, weight=1)
+        self.gui_root.grid_rowconfigure(0, weight=1)
+        self.gui_root.grid_rowconfigure(1, weight=1)
+        self.gui_root.grid_columnconfigure(0, weight=1)
+        self.gui_root.grid_columnconfigure(1, weight=1)
 
         # General Options Frame
-        self.general_frame = ReusableWidgetFrame(self.root, "General Options")
+        self.general_frame = ReusableWidgetFrame(self.gui_root, self.logger, "General Options")
         self.general_frame.grid(row=self.row, column=0, padx=10, pady=5, sticky="nsew")
         self.general_frame.grid_rowconfigure(8, weight=1)
         self.general_frame.grid_columnconfigure(1, weight=1)
         self.add_general_options_widgets()
 
         # YouTube Title Frame with Find/Replace
-        self.youtube_title_frame = ReusableWidgetFrame(self.root, "YouTube Title Options")
+        self.youtube_title_frame = ReusableWidgetFrame(self.gui_root, self.logger, "YouTube Title Options")
         self.youtube_title_frame.grid(row=self.row, column=1, padx=10, pady=5, sticky="nsew")
         self.youtube_title_frame.grid_rowconfigure(4, weight=1)
         self.youtube_title_frame.grid_columnconfigure(1, weight=1)
@@ -116,14 +144,14 @@ class YouTubeBulkUploaderGUI:
         self.row += 1
 
         # Thumbnail Options Frame with Find/Replace
-        self.thumbnail_frame = ReusableWidgetFrame(self.root, "YouTube Thumbnail Options")
+        self.thumbnail_frame = ReusableWidgetFrame(self.gui_root, self.logger, "YouTube Thumbnail Options")
         self.thumbnail_frame.grid(row=self.row, column=0, padx=10, pady=5, sticky="nsew")
         self.thumbnail_frame.grid_rowconfigure(4, weight=1)
         self.thumbnail_frame.grid_columnconfigure(1, weight=1)
         self.add_thumbnail_options_widgets()
 
         # YouTube Description Frame with Find/Replace
-        self.youtube_desc_frame = ReusableWidgetFrame(self.root, "YouTube Description Options")
+        self.youtube_desc_frame = ReusableWidgetFrame(self.gui_root, self.logger, "YouTube Description Options")
         self.youtube_desc_frame.grid(row=self.row, column=1, padx=10, pady=5, sticky="nsew")
         self.youtube_desc_frame.grid_rowconfigure(4, weight=1)
         self.youtube_desc_frame.grid_columnconfigure(1, weight=1)
@@ -132,21 +160,18 @@ class YouTubeBulkUploaderGUI:
         self.row += 1
 
         # Run and Clear Log buttons
-        self.run_button = tk.Button(self.root, text="Run", command=self.run_upload)
+        self.run_button = tk.Button(self.gui_root, text="Run", command=self.run_upload)
         self.run_button.grid(row=self.row, column=0, padx=10, pady=5, sticky="ew")
-        self.clear_log_button = tk.Button(self.root, text="Clear Log", command=self.clear_log)
+        self.clear_log_button = tk.Button(self.gui_root, text="Clear Log", command=self.clear_log)
         self.clear_log_button.grid(row=self.row, column=1, padx=10, pady=5, sticky="ew")
 
         self.row += 1
 
         # Log output at the bottom spanning both columns
-        tk.Label(self.root, text="Log Output:").grid(row=self.row, column=0, columnspan=2, sticky="w")
-        self.log_output = scrolledtext.ScrolledText(self.root, height=10)
+        tk.Label(self.gui_root, text="Log Output:").grid(row=self.row, column=0, columnspan=2, sticky="w")
+        self.log_output = scrolledtext.ScrolledText(self.gui_root, height=10)
         self.log_output.grid(row=self.row, column=0, columnspan=2, padx=10, pady=5, sticky="nsew")
         self.log_output.config(state=tk.DISABLED)  # Make log output read-only
-
-        # Setup logging to text widget
-        self.setup_logging()
 
     def add_general_options_widgets(self):
         frame = self.general_frame
@@ -231,16 +256,22 @@ class YouTubeBulkUploaderGUI:
         frame.new_row()
         self.thumbnail_frame.add_find_replace_widgets("Find / Replace Patterns:")
 
-    def setup_logging(self):
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
-        log_handler = TextHandler(self.log_output)
-        log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-        logger.addHandler(log_handler)
+    def add_textbox_log_handler(self):
+        self.log_handler_textbox = TextHandler(self.logger, self.log_output)
+
+        log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+        self.log_handler_textbox.setFormatter(log_formatter)
+
+        self.logger.addHandler(self.log_handler_textbox)
+
+    def custom_prompt_function(prompt_message, allow_empty):
+        response = messagebox.askyesno("Confirm", f"{prompt_message}")
+
+        return response
 
     def run_upload(self):
-        # Collect values from GUI
-        log_level_str = self.log_level_var.get()
+        self.logger.debug("Running upload process")
+
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()
         source_directory = self.source_directory_var.get()
@@ -254,14 +285,12 @@ class YouTubeBulkUploaderGUI:
         thumb_file_suffix = self.thumb_file_suffix_var.get()
         thumb_file_extensions = self.thumb_file_extensions_var.get().split()
 
-        # Convert log level from string to logging module constant
-        log_level = getattr(logging, log_level_str.upper(), logging.INFO)
-
         # Initialize YouTubeBulkUpload with collected parameters
         youtube_bulk_upload = YouTubeBulkUpload(
-            log_level=log_level,
+            logger=self.logger,
             dry_run=dry_run,
             interactive_prompt=not noninteractive,
+            custom_prompt_function=self.custom_prompt_function,
             source_directory=source_directory,
             youtube_client_secrets_file=yt_client_secrets_file,
             youtube_category_id=yt_category_id,
@@ -278,32 +307,41 @@ class YouTubeBulkUploaderGUI:
         upload_thread = threading.Thread(target=self.threaded_upload, args=(youtube_bulk_upload,))
         upload_thread.start()
 
+    def threaded_upload(self, youtube_bulk_upload):
+        self.logger.debug("Starting threaded upload")
+        try:
+            uploaded_videos = youtube_bulk_upload.process()
+            message = f"Upload complete! Videos uploaded: {len(uploaded_videos)}"
+            self.gui_root.after(0, lambda: messagebox.showinfo("Success", message))
+        except Exception as e:
+            error_message = f"An error occurred: {str(e)}"
+            self.logger.error(error_message)
+            # Pass the error_message variable to the lambda function
+            self.gui_root.after(0, lambda msg=error_message: messagebox.showerror("Error", msg))
+
     def select_client_secrets_file(self):
+        self.logger.debug("Selecting client secrets file")
         filename = filedialog.askopenfilename(title="Select Client Secrets File", filetypes=[("JSON files", "*.json")])
         if filename:
             self.yt_client_secrets_file_var.set(filename)
 
     def select_source_directory(self):
+        self.logger.debug("Selecting source directory")
         directory = filedialog.askdirectory(title="Select Source Directory")
         if directory:
             self.source_directory_var.set(directory)
 
     def clear_log(self):
+        self.logger.debug("Clearing log output")
         self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing
         self.log_output.delete("1.0", tk.END)
         self.log_output.config(state=tk.DISABLED)  # Disable text widget after clearing
 
-    def threaded_upload(self, youtube_bulk_upload):
-        try:
-            uploaded_videos = youtube_bulk_upload.process()
-            self.root.after(0, lambda: messagebox.showinfo("Success", f"Upload complete! Videos uploaded: {len(uploaded_videos)}"))
-        except Exception as e:
-            logging.error(f"An error occurred: {str(e)}")
-            self.root.after(0, lambda: messagebox.showerror("Error", f"An error occurred: {str(e)}"))
-
 
 class TextHandler(logging.Handler):
-    def __init__(self, text_widget):
+    def __init__(self, logger, text_widget):
+        self.logger = logger
+        self.logger.debug("Initializing TextHandler")
         super().__init__()
         self.text_widget = text_widget
 
@@ -316,9 +354,28 @@ class TextHandler(logging.Handler):
 
 
 def main():
-    root = tk.Tk()
-    app = YouTubeBulkUploaderGUI(root)
-    root.mainloop()
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+
+    logger.addHandler(console_handler)
+
+    logger.info("Initializing YouTubeBulkUploaderGUI class")
+    gui_root = tk.Tk()
+
+    # Set application icon
+    icon_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    icon_image = tk.PhotoImage(file=icon_path)
+    gui_root.iconphoto(False, icon_image)
+
+    app = YouTubeBulkUploaderGUI(gui_root, logger)
+
+    logger.debug("Starting main GUI loop")
+    gui_root.mainloop()
 
 
 if __name__ == "__main__":

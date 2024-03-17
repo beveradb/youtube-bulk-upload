@@ -1,5 +1,7 @@
 # YouTube Bulk Upload 🎥🔺
 
+![PyPI - Version](https://img.shields.io/pypi/v/youtube-bulk-upload)
+
 **YouTube Bulk Upload** is a Python tool designed to facilitate the bulk uploading of video files to YouTube. This can be particularly useful for repopulating a channel after it has been unfairly terminated or when migrating content. The tool offers both a Command Line Interface (CLI) and a Graphical User Interface (GUI) to cater to different user preferences.
 
 <img src="logo-nopadding.png" alt="YouTube Bulk Upload Logo" height="100">

@@ -24,6 +24,10 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
       - name: Install project and dependencies
         run: pip install .
 
@@ -34,6 +38,16 @@ jobs:
       - name: Extract architecture
         run: echo "ARCHITECTURE=$(echo '${{ matrix.settings.args }}' | cut -d' ' -f2 | cut -d'-' -f1)" >> $GITHUB_ENV
 
+      # Install create-dmg (Only for macOS)
+      - name: Install create-dmg
+        if: startsWith(matrix.settings.platform, 'macos')
+        run: npm install -g create-dmg
+
+      # Create DMG (Only for macOS)
+      - name: Create DMG
+        if: startsWith(matrix.settings.platform, 'macos')
+        run: create-dmg 'dist/YouTubeBulkUpload.app' --dmg-title="YouTubeBulkUpload"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -41,6 +55,7 @@ jobs:
           path: |
             dist/YouTubeBulkUpload*.app
             dist/YouTubeBulkUpload*.exe
+            dist/*.dmg
 
   # Auto-publish when version is increased
   publish-pypi:

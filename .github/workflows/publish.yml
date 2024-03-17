@@ -18,22 +18,14 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@v4
 
-      # Configured following guide at:
-      # https://github.com/actions/setup-python/blob/main/docs/advanced-usage.md#caching-packages
-      - name: Install poetry
-        run: pip install poetry
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "poetry" # caching dependencies from poetry.lock
 
-      - name: Install Poetry dependencies (CPU)
-        run: poetry install
-
-      - name: Install PyInstaller
-        run: pip install pyinstaller pillow
+      - name: Install project and dependencies
+        run: pip install .
 
       - name: Build application with PyInstaller
         run: |

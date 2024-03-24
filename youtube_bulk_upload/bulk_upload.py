@@ -164,7 +164,7 @@ class YouTubeBulkUpload:
         # Token file stores the user's access and refresh tokens.
         if os.path.exists(pickle_file):
             self.logger.info(f"Existing YouTube auth token file found: {pickle_file}")
-            with open(pickle_file, "rb", encoding="utf-8") as token:
+            with open(pickle_file, "rb") as token:
                 credentials = pickle.load(token)
 
         # If there are no valid credentials, let the user log in.
@@ -178,7 +178,7 @@ class YouTubeBulkUpload:
                 credentials = flow.run_local_server(port=0)  # This will open a browser for authentication
 
             # Save the credentials for the next run
-            with open(pickle_file, "wb", encoding="utf-8") as token:
+            with open(pickle_file, "wb") as token:
                 self.logger.info(f"Saving YouTube auth token to file: {pickle_file}")
                 pickle.dump(credentials, token)
 

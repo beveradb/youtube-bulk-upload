@@ -96,7 +96,11 @@ class YouTubeBulkUpload:
     def find_input_files(self):
         self.logger.info(f"Finding input video files to upload...")
 
-        video_files = [f for f in os.listdir(self.source_directory) if f.endswith(tuple(self.input_file_extensions))]
+        video_files = [
+            os.path.join(self.source_directory, f)
+            for f in os.listdir(self.source_directory)
+            if f.endswith(tuple(self.input_file_extensions))
+        ]
         if not video_files:
             self.logger.error(f"No video files found in current directory to upload.")
             raise Exception(f"No video files found in current directory to upload.")

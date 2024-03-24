@@ -3,6 +3,7 @@
 *.mov
 *client_secret.json
 *description_template.txt
+youtube_bulk_upload_config.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import threading
+import json
 import pkg_resources
 
 import tkinter as tk
@@ -103,7 +104,51 @@ class YouTubeBulkUploaderGUI:
         self.gui_root.update()  # Ensure the window is updated with the latest UI changes
         self.gui_root.minsize(self.gui_root.winfo_width(), self.gui_root.winfo_height())
 
+        self.config_file = "youtube_bulk_upload_config.json"  # Define the config file name
+        self.load_configurations()  # Load configurations on initialization
+
         self.logger.info("YouTubeBulkUploaderGUI Initialized")
+
+    def load_configurations(self):
+        try:
+            with open(self.config_file, "r") as f:
+                config = json.load(f)
+                # Set the variables' values from the config file
+                self.log_level_var.set(config.get("log_level", "info"))
+                self.dry_run_var.set(config.get("dry_run", False))
+                self.noninteractive_var.set(config.get("noninteractive", False))
+                self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
+                self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))
+                self.yt_category_id_var.set(config.get("yt_category_id", "10"))
+                self.yt_keywords_var.set(config.get("yt_keywords", "music"))
+                self.yt_desc_template_file_var.set(config.get("yt_desc_template_file", ""))
+                self.yt_title_prefix_var.set(config.get("yt_title_prefix", ""))
+                self.yt_title_suffix_var.set(config.get("yt_title_suffix", ""))
+                self.thumb_file_prefix_var.set(config.get("thumb_file_prefix", ""))
+                self.thumb_file_suffix_var.set(config.get("thumb_file_suffix", ""))
+                self.thumb_file_extensions_var.set(config.get("thumb_file_extensions", ".png .jpg .jpeg"))
+
+        except FileNotFoundError:
+            pass  # If the config file does not exist, just pass
+
+    def save_configurations(self):
+        config = {
+            "log_level": self.log_level_var.get(),
+            "dry_run": self.dry_run_var.get(),
+            "noninteractive": self.noninteractive_var.get(),
+            "source_directory": self.source_directory_var.get(),
+            "yt_client_secrets_file": self.yt_client_secrets_file_var.get(),
+            "yt_category_id": self.yt_category_id_var.get(),
+            "yt_keywords": self.yt_keywords_var.get(),
+            "yt_desc_template_file": self.yt_desc_template_file_var.get(),
+            "yt_title_prefix": self.yt_title_prefix_var.get(),
+            "yt_title_suffix": self.yt_title_suffix_var.get(),
+            "thumb_file_prefix": self.thumb_file_prefix_var.get(),
+            "thumb_file_suffix": self.thumb_file_suffix_var.get(),
+            "thumb_file_extensions": self.thumb_file_extensions_var.get(),
+        }
+        with open(self.config_file, "w") as f:
+            json.dump(config, f, indent=4)
 
     def on_log_level_change(self, *args):
         self.logger.debug(f"Log level changed to: {self.log_level_var.get()}")
@@ -365,6 +410,11 @@ class TextHandler(logging.Handler):
         self.text_widget.config(state=tk.DISABLED)  # Disable text widget after updating
 
 
+def on_closing(app, root):
+    app.save_configurations()  # Save configurations before closing
+    root.destroy()
+
+
 def main():
     home_dir = os.path.expanduser("~")
     sys.stdout = open(os.path.join(home_dir, "youtube_bulk_upload_stdout.log"), "w")
@@ -385,6 +435,8 @@ def main():
 
     logger.info("Initializing YouTubeBulkUploaderGUI class")
     gui_root = tk.Tk()
+
+    gui_root.protocol("WM_DELETE_WINDOW", lambda: on_closing(app, gui_root))
 
     try:
         app = YouTubeBulkUploaderGUI(gui_root, logger)

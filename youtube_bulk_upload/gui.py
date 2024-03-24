@@ -110,6 +110,7 @@ class YouTubeBulkUploaderGUI:
         self.thumb_file_prefix_var = tk.StringVar()
         self.thumb_file_suffix_var = tk.StringVar()
         self.thumb_file_extensions_var = tk.StringVar(value=".png .jpg .jpeg")
+        self.dont_show_welcome_message_var = tk.BooleanVar(value=False)
 
         # Fire off our clean shutdown function when the user requests to close the window
         gui_root.wm_protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -127,14 +128,58 @@ class YouTubeBulkUploaderGUI:
         self.gui_root.update()
         self.gui_root.minsize(self.gui_root.winfo_width(), self.gui_root.winfo_height())
 
+        # Load user GUI config values on initialization
         user_home_dir = os.path.expanduser("~")
         self.gui_config_filepath = os.path.join(user_home_dir, "youtube_bulk_upload_config.json")
-        self.load_gui_config_options()  # Load configurations on initialization
+        self.load_gui_config_options()
+
+        # Show the welcome popup if applicable
+        self.show_welcome_popup()
 
         self.user_input_event = threading.Event()
         self.user_input_result = None
 
         self.logger.info("YouTubeBulkUploaderGUI Initialized")
+
+    def show_welcome_popup(self):
+        # Don't show the popup if the user opted out
+        if self.dont_show_welcome_message_var.get():
+            return
+
+        welcome_window = tk.Toplevel(self.gui_root)
+        welcome_window.title("Welcome to YouTube Bulk Uploader")
+
+        message = """Welcome to YouTube Bulk Uploader!
+
+        This tool helps you upload videos to YouTube in bulk with custom metadata settings.
+
+        Please watch Andrew's tutorial video on YouTube to understand how to use it:
+
+        https://www.youtube.com/watch?v=3QRQYoUknNw
+
+        Happy uploading!"""
+
+        tk.Label(welcome_window, text=message, wraplength=400).pack(padx=20, pady=10)
+
+        dont_show_again = tk.Checkbutton(welcome_window, text="Don't show this message again", variable=self.dont_show_welcome_message_var)
+        dont_show_again.pack()
+
+        close_button = tk.Button(welcome_window, text="Close", command=welcome_window.destroy)
+        close_button.pack(pady=10)
+
+        # Update the window to calculate its size
+        welcome_window.update_idletasks()
+
+        # Retrieve the calculated size
+        welcome_window_width = welcome_window.winfo_width()
+        welcome_window_height = welcome_window.winfo_height()
+
+        # Calculate the center position
+        position_right = int(self.gui_root.winfo_x() + (self.gui_root.winfo_width() / 2) - (welcome_window_width / 2))
+        position_down = int(self.gui_root.winfo_y() + (self.gui_root.winfo_height() / 2) - (welcome_window_height / 2))
+
+        # Position the window in the center of the parent window
+        welcome_window.geometry(f"+{position_right}+{position_down}")
 
     def load_gui_config_options(self):
         self.logger.info(f"Loading GUI configuration values from file: {self.gui_config_filepath}")
@@ -156,6 +201,7 @@ class YouTubeBulkUploaderGUI:
                 self.thumb_file_prefix_var.set(config.get("thumb_file_prefix", ""))
                 self.thumb_file_suffix_var.set(config.get("thumb_file_suffix", ""))
                 self.thumb_file_extensions_var.set(config.get("thumb_file_extensions", ".png .jpg .jpeg"))
+                self.dont_show_welcome_message_var = tk.BooleanVar(value=config.get("dont_show_welcome_message", False))
 
                 # Load replacement patterns
                 youtube_description_replacements = config.get("youtube_description_replacements", [])
@@ -198,6 +244,7 @@ class YouTubeBulkUploaderGUI:
             "youtube_description_replacements": youtube_description_replacements,
             "youtube_title_replacements": youtube_title_replacements,
             "thumbnail_filename_replacements": thumbnail_filename_replacements,
+            "dont_show_welcome_message": self.dont_show_welcome_message_var.get(),
         }
         with open(self.gui_config_filepath, "w") as f:
             json.dump(config, f, indent=4)
@@ -561,18 +608,26 @@ class DualLogger:
     _lock = threading.Lock()  # Class-level lock shared by all instances
 
     def __init__(self, file_path, stream):
-        self.file = open(file_path, "a")  # Open in append mode
+        try:
+            self.file = open(file_path, "a")  # Open in append mode
+        except Exception as e:
+            print(f"Failed to open log file {file_path}: {e}")
+            self.file = None
         self.stream = stream
 
     def write(self, message):
         with self._lock:  # Ensure only one thread can enter this block at a time
-            self.file.write(message)
-            self.stream.write(message)
+            if self.file is not None:
+                self.file.write(message)
+            if self.stream is not None:
+                self.stream.write(message)
             self.flush()  # Ensure the message is written immediately
 
     def flush(self):
-        self.file.flush()
-        self.stream.flush()
+        if self.file is not None:
+            self.file.flush()
+        if self.stream is not None:
+            self.stream.flush()
 
 
 def main():

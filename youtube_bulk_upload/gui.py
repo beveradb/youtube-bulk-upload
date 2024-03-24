@@ -4,6 +4,7 @@ import logging
 import threading
 import json
 import pkg_resources
+from pathlib import Path
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, simpledialog
@@ -81,10 +82,13 @@ class ReusableWidgetFrame(tk.LabelFrame):
 
 
 class YouTubeBulkUploaderGUI:
-    def __init__(self, gui_root, logger):
+    def __init__(self, gui_root: tk.Tk, logger: logging.Logger, bundle_dir: Path, running_in_pyinstaller: bool):
         self.logger = logger
-        self.logger.debug("Initializing YouTubeBulkUploaderGUI")
+        self.logger.debug(f"Initializing YouTubeBulkUploaderGUI, bundle_dir: {bundle_dir}")
+
         self.gui_root = gui_root
+        self.bundle_dir = bundle_dir
+        self.running_in_pyinstaller = running_in_pyinstaller
 
         # Define variables for inputs
         self.log_level = logging.DEBUG
@@ -107,25 +111,36 @@ class YouTubeBulkUploaderGUI:
         self.thumb_file_suffix_var = tk.StringVar()
         self.thumb_file_extensions_var = tk.StringVar(value=".png .jpg .jpeg")
 
-        self.setup_ui()
+        # Fire off our clean shutdown function when the user requests to close the window
+        gui_root.wm_protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        # Add logging to text box UI element
+        # Set the application icon to the YouTube Bulk Upload logo
+        self.set_window_icon()
+
+        # Set up the GUI frames and widgets
+        self.create_gui_frames_widgets()
+
+        # Add a text box to the GUI which shows all log messages using the existing shared logger
         self.add_textbox_log_handler()
 
-        self.gui_root.update()  # Ensure the window is updated with the latest UI changes
+        # Ensure the window is updated with the latest UI changes before calculating the minimum size
+        self.gui_root.update()
         self.gui_root.minsize(self.gui_root.winfo_width(), self.gui_root.winfo_height())
 
-        self.config_file = "youtube_bulk_upload_config.json"  # Define the config file name
-        self.load_configurations()  # Load configurations on initialization
+        user_home_dir = os.path.expanduser("~")
+        self.gui_config_filepath = os.path.join(user_home_dir, "youtube_bulk_upload_config.json")
+        self.load_gui_config_options()  # Load configurations on initialization
 
         self.user_input_event = threading.Event()
         self.user_input_result = None
 
         self.logger.info("YouTubeBulkUploaderGUI Initialized")
 
-    def load_configurations(self):
+    def load_gui_config_options(self):
+        self.logger.info(f"Loading GUI configuration values from file: {self.gui_config_filepath}")
+
         try:
-            with open(self.config_file, "r") as f:
+            with open(self.gui_config_filepath, "r") as f:
                 config = json.load(f)
                 # Set the variables' values from the config file
                 self.log_level_var.set(config.get("log_level", "info"))
@@ -158,7 +173,9 @@ class YouTubeBulkUploaderGUI:
         except FileNotFoundError:
             pass  # If the config file does not exist, just pass
 
-    def save_configurations(self):
+    def save_gui_config_options(self):
+        self.logger.info(f"Saving GUI configuration values to file: {self.gui_config_filepath}")
+
         # Serialize replacement patterns
         youtube_description_replacements = self.youtube_desc_frame.get_replacements()
         youtube_title_replacements = self.youtube_title_frame.get_replacements()
@@ -182,7 +199,7 @@ class YouTubeBulkUploaderGUI:
             "youtube_title_replacements": youtube_title_replacements,
             "thumbnail_filename_replacements": thumbnail_filename_replacements,
         }
-        with open(self.config_file, "w") as f:
+        with open(self.gui_config_filepath, "w") as f:
             json.dump(config, f, indent=4)
 
     def on_log_level_change(self, *args):
@@ -195,8 +212,8 @@ class YouTubeBulkUploaderGUI:
 
         self.logger.setLevel(self.log_level)
 
-    def setup_ui(self):
-        self.logger.debug("Setting up UI")
+    def create_gui_frames_widgets(self):
+        self.logger.debug("Setting up GUI frames and widgets")
         self.row = 0
         # Fetch the package version
         package_version = pkg_resources.get_distribution("youtube-bulk-upload").version
@@ -342,7 +359,37 @@ class YouTubeBulkUploaderGUI:
         frame.new_row()
         self.thumbnail_frame.add_find_replace_widgets("Find / Replace Patterns:")
 
+    def set_window_icon(self):
+        self.logger.info("Setting window icon to app logo")
+
+        try:
+            icon_filepaths = [
+                os.path.join(self.bundle_dir, "logo.png"),
+                os.path.join(self.bundle_dir, "youtube_bulk_upload", "logo.png"),
+                os.path.join(self.bundle_dir, "logo.ico"),
+                os.path.join(self.bundle_dir, "youtube_bulk_upload", "logo.ico"),
+            ]
+
+            icon_set = False
+            for icon_filepath in icon_filepaths:
+                if os.path.exists(icon_filepath):
+                    self.logger.info(f"Found logo image at filepath: {icon_filepath}, setting as window icon.")
+                    if icon_filepath.endswith(".ico"):
+                        self.gui_root.iconbitmap(icon_filepath)
+                    else:
+                        photo = tk.PhotoImage(file=icon_filepath)
+                        self.gui_root.wm_iconphoto(False, photo)
+                    icon_set = True
+                    break
+
+            if not icon_set:
+                raise FileNotFoundError("Logo image not found in any of the specified filepaths.")
+
+        except Exception as e:
+            self.logger.error(f"Failed to set window icon due to error: {e}")
+
     def add_textbox_log_handler(self):
+        self.logger.info("Adding textbox log handler to logger")
         self.log_handler_textbox = TextHandler(self.logger, self.log_output)
 
         log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
@@ -436,10 +483,20 @@ class YouTubeBulkUploaderGUI:
         self.upload_thread.start()
 
     def on_closing(self):
-        self.logger.debug("YouTubeBulkUploaderGUI.on_closing called")
-        self.stop_event.set()  # Signal the thread to stop
+        self.logger.info("YouTubeBulkUploaderGUI on_closing called, saving configuration and stopping upload thread")
+
+        self.logger.debug("Setting stop_event to stop upload thread")
+        self.stop_event.set()
+
+        self.save_gui_config_options()
+
+        # Wait for the thread to finish - bulk_upload.py has self.stop_event check in process() loop
+        # so it should wait for any current upload to finish then not continue to another
         if self.upload_thread:
-            self.upload_thread.join()  # Wait for the thread to finish
+            self.logger.debug("Waiting for upload thread to finish")
+            self.upload_thread.join()
+
+        self.logger.info("Upload thread shut down successfully, destroying GUI window. Goodbye for now!")
         self.gui_root.destroy()
 
     def threaded_upload(self, youtube_bulk_upload):
@@ -494,43 +551,71 @@ class TextHandler(logging.Handler):
         self.text_widget.config(state=tk.DISABLED)  # Disable text widget after updating
 
 
-def on_closing(app, root):
-    app.save_configurations()  # Save configurations before closing
-    root.destroy()
+class DualLogger:
+    """
+    A class that can be used to log to both a file and the console at the same time.
+    This is used to log to the GUI and to a file at the same time.
+    Multiple instances can be used pointing to the same file, and each instance will not overwrite one another.
+    """
+
+    _lock = threading.Lock()  # Class-level lock shared by all instances
+
+    def __init__(self, file_path, stream):
+        self.file = open(file_path, "a")  # Open in append mode
+        self.stream = stream
+
+    def write(self, message):
+        with self._lock:  # Ensure only one thread can enter this block at a time
+            self.file.write(message)
+            self.stream.write(message)
+            self.flush()  # Ensure the message is written immediately
+
+    def flush(self):
+        self.file.flush()
+        self.stream.flush()
 
 
 def main():
-    home_dir = os.path.expanduser("~")
-    sys.stdout = open(os.path.join(home_dir, "youtube_bulk_upload_stdout.log"), "w")
-    sys.stderr = open(os.path.join(home_dir, "youtube_bulk_upload_stderr.log"), "w")
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        bundle_dir = Path(sys._MEIPASS)
+        # If we're running from a PyInstaller bundle, log to user's home dir
+        user_home_dir = os.path.expanduser("~")
+        log_filepath = os.path.join(user_home_dir, "youtube_bulk_upload.log")
+        running_in_pyinstaller = True
+    else:
+        bundle_dir = Path(__file__).parent.parent
+        # If this GUI was launched from the command line, log to the current directory
+        log_filepath = os.path.join(bundle_dir, "youtube_bulk_upload.log")
+        running_in_pyinstaller = False
+
+    sys.stdout = DualLogger(log_filepath, sys.stdout)
+    sys.stderr = DualLogger(log_filepath, sys.stderr)
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
     log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
 
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
 
-    file_handler = logging.FileHandler(os.path.join(home_dir, "youtube_bulk_upload.log"))
-    file_handler.setFormatter(log_formatter)
-    logger.addHandler(file_handler)
+    logger.info(f"YouTubeBulkUploaderGUI launched, PyInstaller: {running_in_pyinstaller}, Logging to stdout and file: {log_filepath}")
 
-    logger.info("Initializing YouTubeBulkUploaderGUI class")
+    logger.info("Creating Tkinter GUI root object")
     gui_root = tk.Tk()
 
     try:
-        app = YouTubeBulkUploaderGUI(gui_root, logger)
-        gui_root.protocol("WM_DELETE_WINDOW", lambda: on_closing(app, gui_root))
+        app = YouTubeBulkUploaderGUI(gui_root, logger, bundle_dir, running_in_pyinstaller)
 
         logger.debug("Starting main GUI loop")
+
+        logger.info(f"If you have encounter any issues with YouTube Bulk Upload, please send Andrew the logs from the file path below!")
+        logger.info(f"Log file path: {log_filepath}")
+
         gui_root.mainloop()
     except Exception as e:
         logger.error(str(e))
-
-        with open("youtube_bulk_upload_error.log", "w") as f:
-            f.write(str(e))
 
         # Pass the error_message variable to the lambda function
         gui_root.after(0, lambda msg=str(e): messagebox.showerror("Error", msg))

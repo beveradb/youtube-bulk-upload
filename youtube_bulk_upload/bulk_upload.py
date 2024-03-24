@@ -22,7 +22,7 @@ class YouTubeBulkUpload:
         dry_run=False,
         interactive_prompt=True,
         stop_event=None,
-        custom_prompt_function=None,
+        gui=None,
         source_directory=os.getcwd(),
         input_file_extensions=[".mp4", ".mov"],
         upload_batch_limit=100,
@@ -68,12 +68,12 @@ class YouTubeBulkUpload:
             f"thumbnail_filename_replacements: {thumbnail_filename_replacements}, thumbnail_filename_extensions: {thumbnail_filename_extensions}"
         )
 
+        self.gui = gui
         self.stop_event = stop_event
         self.dry_run = dry_run
 
         self.source_directory = source_directory
         self.input_file_extensions = input_file_extensions
-        self.custom_prompt_function = custom_prompt_function
 
         self.youtube_client_secrets_file = youtube_client_secrets_file
 
@@ -117,9 +117,16 @@ class YouTubeBulkUpload:
             raise Exception(exit_message)
 
     def prompt_user_bool(self, prompt_message, allow_empty=False):
+        if self.gui is not None:
+            # Trigger the GUI prompt (this will return immediately)
+            self.gui.prompt_user_bool(prompt_message=prompt_message, allow_empty=allow_empty)
 
-        if self.custom_prompt_function is not None:
-            return self.custom_prompt_function(prompt_message=prompt_message, allow_empty=allow_empty)
+            # Wait for the user to provide input or close the dialog
+            self.gui.user_input_event.wait()
+
+            # Once the event is set, retrieve the input
+            user_input = self.gui.user_input_result
+            return user_input
         else:
             options_string = "[y]/n" if allow_empty else "y/[n]"
             accept_responses = ["y", "yes"]
@@ -129,6 +136,21 @@ class YouTubeBulkUpload:
             print()
             response = input(f"{prompt_message} {options_string} ")
             return response.strip().lower() in accept_responses
+
+    def prompt_user_text(self, prompt_message, default_response=""):
+        if self.gui is not None:
+            # Trigger the GUI prompt (this will return immediately)
+            self.gui.prompt_user_text(prompt_message, default_response)
+
+            # Wait for the user to provide input or close the dialog
+            self.gui.user_input_event.wait()
+
+            # Once the event is set, retrieve the input
+            user_input = self.gui.user_input_result
+            return user_input
+
+        else:
+            return input(prompt_message)
 
     def validate_input_parameters(self):
         self.logger.info(f"Validating input parameters for enabled features...")
@@ -219,8 +241,9 @@ class YouTubeBulkUpload:
                         f"Potential match found on YouTube channel with ID: {found_id} and title: {found_title} (similarity: {similarity_score}%)"
                     )
                     if self.interactive_prompt:
-                        confirmation = input(f"Is '{found_title}' the same video as '{youtube_title}'? (y/n): ").strip().lower()
-                        if confirmation == "y":
+                        self.logger.debug("Prompting user to confirm whether video matches existing on channel")
+                        prompt_message = f"Is '{found_title}' the same video as existing video on channel: '{youtube_title}'? (y/n): "
+                        if self.prompt_user_bool(prompt_message):
                             return found_id
                     else:
                         return found_id
@@ -229,6 +252,7 @@ class YouTubeBulkUpload:
         return None
 
     def truncate_to_nearest_word(self, title, max_length):
+        self.logger.debug(f"Truncating title with length {len(title)} to nearest word with max length: {max_length}")
         if len(title) <= max_length:
             return title
         truncated_title = title[:max_length].rsplit(" ", 1)[0]
@@ -304,6 +328,7 @@ class YouTubeBulkUpload:
                 return potential_filename
 
         if self.interactive_prompt:
+            self.logger.debug("Prompting user to confirm whether happy to proceed without thumbnail")
             self.prompt_user_confirmation_or_raise_exception(
                 "No valid thumbnail file found. Do you want to continue without a thumbnail?",
                 "Operation cancelled due to missing thumbnail file.",
@@ -338,8 +363,10 @@ class YouTubeBulkUpload:
         video_title = self.truncate_to_nearest_word(video_title, max_length)
 
         if self.interactive_prompt:
+            self.logger.debug(f"Prompting user to confirm title: {video_title}")
             if not self.prompt_user_bool(f"Are you happy with the generated title: {video_title}?"):
-                video_title = input("Please type the title you would like to use (max 100 chars): ")
+                prompt_message = "Please type the title you would like to use (max 100 chars): "
+                video_title = self.prompt_user_text(prompt_message, default_response=video_title)
 
         return video_title
 
@@ -352,7 +379,7 @@ class YouTubeBulkUpload:
                 description = file.read()
 
         if self.youtube_description_replacements is not None:
-            self.logger.info(f"Applying replacement patterns to description: {description}")
+            self.logger.info(f"Applying replacement patterns to description text with length: {len(description)}")
 
             for pattern, replacement in self.youtube_description_replacements:
 
@@ -366,7 +393,8 @@ class YouTubeBulkUpload:
 
         if not description and self.interactive_prompt:
             self.logger.warning(f"Unable to load YouTube description from file for video file: {video_file}...")
-            description = input("No description template file found. Please type the description you would like to use: ")
+            prompt_message = "No description template file found. Please type the description you would like to use: "
+            description = self.prompt_user_text(prompt_message, default_response=description)
 
         return description
 
@@ -407,12 +435,16 @@ class YouTubeBulkUpload:
                 if self.interactive_prompt:
                     self.logger.info("Interactive prompt is enabled. Confirming upload details with user.")
                     confirmation_prompt = (
-                        f"Are you happy with the YouTube title: {youtube_title}?\n"
-                        f"Description: {youtube_description}\n"
-                        f"Thumbnail filepath: {thumbnail_filepath}\n"
+                        f"Confirm you are happy for video to be uploaded to your channel with details:\n\n"
+                        f"Filename: {video_file}\n\n"
+                        f"Title: {youtube_title}?\n\n"
+                        f"Thumbnail filepath: {thumbnail_filepath}\n\n"
+                        f"Description: {youtube_description}\n\n"
                         "Proceed with upload? (y/n): "
                     )
-                    if not self.prompt_user_bool(confirmation_prompt):
+                    if self.prompt_user_bool(confirmation_prompt):
+                        self.logger.info("User confirmed upload details. Proceeding with upload.")
+                    else:
                         self.logger.info("User not happy with the upload details. Skipping upload for this video.")
                         continue
 

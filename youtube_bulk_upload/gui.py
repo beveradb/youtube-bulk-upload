@@ -6,7 +6,7 @@ import json
 import pkg_resources
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog
 
 from youtube_bulk_upload import YouTubeBulkUpload
 
@@ -117,6 +117,9 @@ class YouTubeBulkUploaderGUI:
 
         self.config_file = "youtube_bulk_upload_config.json"  # Define the config file name
         self.load_configurations()  # Load configurations on initialization
+
+        self.user_input_event = threading.Event()
+        self.user_input_result = None
 
         self.logger.info("YouTubeBulkUploaderGUI Initialized")
 
@@ -347,10 +350,41 @@ class YouTubeBulkUploaderGUI:
 
         self.logger.addHandler(self.log_handler_textbox)
 
-    def custom_prompt_function(self, prompt_message, allow_empty):
-        response = messagebox.askyesno("Confirm", f"{prompt_message}")
+    def prompt_user_bool(self, prompt_message, allow_empty=False):
+        """
+        Prompt the user for a boolean input via a GUI dialog in a thread-safe manner.
 
-        return response
+        :param prompt_message: The message to display in the dialog.
+        :param allow_empty: Not used in this context, kept for compatibility.
+        :return: The boolean value entered by the user, or None if the dialog was canceled.
+        """
+        self.logger.debug(f"Prompting user for boolean input")
+
+        def prompt():
+            self.user_input_result = messagebox.askyesno("Confirm", prompt_message)
+            self.user_input_event.set()  # Signal that input has been received
+
+        self.user_input_event.clear()
+        self.gui_root.after(0, prompt)
+        return None  # Immediate return; we'll wait for the input
+
+    def prompt_user_text(self, prompt_message, default_response=""):
+        """
+        Prompt the user for text input via a GUI dialog.
+
+        :param prompt_message: The message to display in the dialog.
+        :param default_response: The default text to display in the input box.
+        :return: The text entered by the user, or None if the dialog was canceled.
+        """
+        self.logger.debug(f"Prompting user for text input")
+
+        def prompt():
+            self.user_input_result = simpledialog.askstring("Input", prompt_message, parent=self.gui_root, initialvalue=default_response)
+            self.user_input_event.set()  # Signal that input has been received
+
+        self.user_input_event.clear()
+        self.gui_root.after(0, prompt)
+        return None  # Immediate return; we'll wait for the input
 
     def run_upload(self):
         self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
@@ -379,7 +413,7 @@ class YouTubeBulkUploaderGUI:
             dry_run=dry_run,
             interactive_prompt=not noninteractive,
             stop_event=self.stop_event,
-            custom_prompt_function=self.custom_prompt_function,
+            gui=self,
             source_directory=source_directory,
             youtube_client_secrets_file=yt_client_secrets_file,
             youtube_category_id=yt_category_id,

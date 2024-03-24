@@ -60,7 +60,7 @@ class ReusableWidgetFrame(tk.LabelFrame):
         self.logger.debug("Adding a replacement")
         find_text = self.find_var.get()
         replace_text = self.replace_var.get()
-        if find_text and replace_text:
+        if find_text:
             self.replacements_listbox.insert(tk.END, f"{find_text} -> {replace_text}")
             self.find_var.set("")
             self.replace_var.set("")

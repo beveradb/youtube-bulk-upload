@@ -289,7 +289,10 @@ class YouTubeBulkUpload:
 
         # Apply thumbnail filename replacements if set
         if self.thumbnail_filename_replacements is not None:
+            self.logger.info(f"Applying replacement patterns to thumbnail filename: {modified_filename}")
+
             for pattern, replacement in self.thumbnail_filename_replacements:
+                self.logger.debug(f"Applying thumbnail replacement pattern: {pattern} -> {replacement}")
                 modified_filename = re.sub(pattern, replacement, modified_filename)
 
         # Test each file extension until a file is found
@@ -322,7 +325,10 @@ class YouTubeBulkUpload:
 
         # Apply YouTube title replacements if set
         if self.youtube_title_replacements is not None:
+            self.logger.info(f"Applying replacement patterns to title: {video_title}")
+
             for pattern, replacement in self.youtube_title_replacements:
+                self.logger.debug(f"Applying title replacement pattern: {pattern} -> {replacement}")
                 video_title = re.sub(pattern, replacement, video_title)
 
         # Truncate title to the nearest whole word and add ellipsis if needed
@@ -344,12 +350,16 @@ class YouTubeBulkUpload:
                 description = file.read()
 
         if self.youtube_description_replacements is not None:
+            self.logger.info(f"Applying replacement patterns to description: {description}")
+
             for pattern, replacement in self.youtube_description_replacements:
 
                 # Allow the user to use the jinja-ish syntax to refer to the youtube title in the replacement string
                 if "{{youtube_title}}" in replacement:
+                    self.logger.debug(f"Replacing youtube title template with actual title: {youtube_title}")
                     replacement = replacement.replace("{{youtube_title}}", youtube_title)
 
+                self.logger.debug(f"Applying description replacement pattern: {pattern} -> {replacement}")
                 description = re.sub(pattern, replacement, description)
 
         if not description and self.interactive_prompt:

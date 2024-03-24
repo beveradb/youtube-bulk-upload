@@ -21,6 +21,7 @@ class YouTubeBulkUpload:
         log_formatter=None,
         dry_run=False,
         interactive_prompt=True,
+        stop_event=None,
         custom_prompt_function=None,
         source_directory=os.getcwd(),
         input_file_extensions=[".mp4", ".mov"],
@@ -67,6 +68,7 @@ class YouTubeBulkUpload:
             f"thumbnail_filename_replacements: {thumbnail_filename_replacements}, thumbnail_filename_extensions: {thumbnail_filename_extensions}"
         )
 
+        self.stop_event = stop_event
         self.dry_run = dry_run
 
         self.source_directory = source_directory
@@ -372,12 +374,20 @@ class YouTubeBulkUpload:
         if self.dry_run:
             self.logger.warning("Dry run enabled. No actions will be performed.")
 
+        self.logger.info("Process beginning, validating input parameters")
+
         # Check required input files and parameters exist before proceeding
         self.validate_input_parameters()
 
         video_files = self.find_input_files()
         uploaded_videos = []
         for video_file in video_files:
+            # Check if stop_event is set before processing each video
+            self.logger.debug("Checking stop event before processing videos...")
+            if self.stop_event and self.stop_event.is_set():
+                self.logger.info("Stop event set, stopping the upload process.")
+                break
+
             if len(uploaded_videos) >= self.upload_batch_limit:
                 self.logger.warning(
                     f"Reached the maximum upload limit of {self.upload_batch_limit} videos in a 24-hour period. Please wait until tomorrow to run again."

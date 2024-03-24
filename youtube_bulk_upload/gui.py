@@ -71,6 +71,14 @@ class ReusableWidgetFrame(tk.LabelFrame):
         for i in reversed(selected_indices):
             self.replacements_listbox.delete(i)
 
+    def get_replacements(self):
+        replacements = []
+        listbox_items = self.replacements_listbox.get(0, tk.END)
+        for item in listbox_items:
+            find, replace = item.split(" -> ")
+            replacements.append((find, replace))
+        return replacements
+
 
 class YouTubeBulkUploaderGUI:
     def __init__(self, gui_root, logger):
@@ -82,6 +90,9 @@ class YouTubeBulkUploaderGUI:
         self.log_level = logging.DEBUG
         self.log_level_var = tk.StringVar(value="info")
         self.log_level_var.trace("w", self.on_log_level_change)
+
+        self.upload_thread = None
+        self.stop_event = threading.Event()
 
         self.dry_run_var = tk.BooleanVar()
         self.noninteractive_var = tk.BooleanVar()
@@ -128,10 +139,28 @@ class YouTubeBulkUploaderGUI:
                 self.thumb_file_suffix_var.set(config.get("thumb_file_suffix", ""))
                 self.thumb_file_extensions_var.set(config.get("thumb_file_extensions", ".png .jpg .jpeg"))
 
+                # Load replacement patterns
+                youtube_description_replacements = config.get("youtube_description_replacements", [])
+                youtube_title_replacements = config.get("youtube_title_replacements", [])
+                thumbnail_filename_replacements = config.get("thumbnail_filename_replacements", [])
+
+                # Populate the Listbox widgets with the loaded replacements
+                for find, replace in youtube_description_replacements:
+                    self.youtube_desc_frame.replacements_listbox.insert(tk.END, f"{find} -> {replace}")
+                for find, replace in youtube_title_replacements:
+                    self.youtube_title_frame.replacements_listbox.insert(tk.END, f"{find} -> {replace}")
+                for find, replace in thumbnail_filename_replacements:
+                    self.thumbnail_frame.replacements_listbox.insert(tk.END, f"{find} -> {replace}")
+
         except FileNotFoundError:
             pass  # If the config file does not exist, just pass
 
     def save_configurations(self):
+        # Serialize replacement patterns
+        youtube_description_replacements = self.youtube_desc_frame.get_replacements()
+        youtube_title_replacements = self.youtube_title_frame.get_replacements()
+        thumbnail_filename_replacements = self.thumbnail_frame.get_replacements()
+
         config = {
             "log_level": self.log_level_var.get(),
             "dry_run": self.dry_run_var.get(),
@@ -146,6 +175,9 @@ class YouTubeBulkUploaderGUI:
             "thumb_file_prefix": self.thumb_file_prefix_var.get(),
             "thumb_file_suffix": self.thumb_file_suffix_var.get(),
             "thumb_file_extensions": self.thumb_file_extensions_var.get(),
+            "youtube_description_replacements": youtube_description_replacements,
+            "youtube_title_replacements": youtube_title_replacements,
+            "thumbnail_filename_replacements": thumbnail_filename_replacements,
         }
         with open(self.config_file, "w") as f:
             json.dump(config, f, indent=4)
@@ -321,7 +353,7 @@ class YouTubeBulkUploaderGUI:
         return response
 
     def run_upload(self):
-        self.logger.debug("Running upload process")
+        self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
 
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()
@@ -336,11 +368,17 @@ class YouTubeBulkUploaderGUI:
         thumb_file_suffix = self.thumb_file_suffix_var.get()
         thumb_file_extensions = self.thumb_file_extensions_var.get().split()
 
-        # Initialize YouTubeBulkUpload with collected parameters
-        youtube_bulk_upload = YouTubeBulkUpload(
+        # Extract replacement patterns
+        youtube_description_replacements = self.youtube_desc_frame.get_replacements()
+        youtube_title_replacements = self.youtube_title_frame.get_replacements()
+        thumbnail_filename_replacements = self.thumbnail_frame.get_replacements()
+
+        # Initialize YouTubeBulkUpload with collected parameters and replacements
+        self.youtube_bulk_upload = YouTubeBulkUpload(
             logger=self.logger,
             dry_run=dry_run,
             interactive_prompt=not noninteractive,
+            stop_event=self.stop_event,
             custom_prompt_function=self.custom_prompt_function,
             source_directory=source_directory,
             youtube_client_secrets_file=yt_client_secrets_file,
@@ -352,11 +390,23 @@ class YouTubeBulkUploaderGUI:
             thumbnail_filename_prefix=thumb_file_prefix,
             thumbnail_filename_suffix=thumb_file_suffix,
             thumbnail_filename_extensions=thumb_file_extensions,
+            youtube_description_replacements=youtube_description_replacements,
+            youtube_title_replacements=youtube_title_replacements,
+            thumbnail_filename_replacements=thumbnail_filename_replacements,
         )
 
+        self.logger.info("Beginning YouTubeBulkUpload process thread...")
+
         # Run the upload process in a separate thread to prevent GUI freezing
-        upload_thread = threading.Thread(target=self.threaded_upload, args=(youtube_bulk_upload,))
-        upload_thread.start()
+        self.upload_thread = threading.Thread(target=self.threaded_upload, args=(self.youtube_bulk_upload,))
+        self.upload_thread.start()
+
+    def on_closing(self):
+        self.logger.debug("YouTubeBulkUploaderGUI.on_closing called")
+        self.stop_event.set()  # Signal the thread to stop
+        if self.upload_thread:
+            self.upload_thread.join()  # Wait for the thread to finish
+        self.gui_root.destroy()
 
     def threaded_upload(self, youtube_bulk_upload):
         self.logger.debug("Starting threaded upload")
@@ -365,9 +415,9 @@ class YouTubeBulkUploaderGUI:
             message = f"Upload complete! Videos uploaded: {len(uploaded_videos)}"
             self.gui_root.after(0, lambda: messagebox.showinfo("Success", message))
         except Exception as e:
-            error_message = f"An error occurred: {str(e)}"
+            error_message = f"An error occurred during upload: {str(e)}"
             self.logger.error(error_message)
-            # Pass the error_message variable to the lambda function
+            # Ensure the error message is shown in the GUI as well
             self.gui_root.after(0, lambda msg=error_message: messagebox.showerror("Error", msg))
 
     def select_client_secrets_file(self):
@@ -436,10 +486,9 @@ def main():
     logger.info("Initializing YouTubeBulkUploaderGUI class")
     gui_root = tk.Tk()
 
-    gui_root.protocol("WM_DELETE_WINDOW", lambda: on_closing(app, gui_root))
-
     try:
         app = YouTubeBulkUploaderGUI(gui_root, logger)
+        gui_root.protocol("WM_DELETE_WINDOW", lambda: on_closing(app, gui_root))
 
         logger.debug("Starting main GUI loop")
         gui_root.mainloop()

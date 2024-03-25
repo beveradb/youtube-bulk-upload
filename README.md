@@ -13,11 +13,11 @@
 - Non-interactive mode for automated processes.
 - Support for thumbnail customization.
 
-## Installation & Usage (GUI)
+## Installation (GUI)
 
-For those who prefer a graphical interface, YouTube Bulk Upload provides a GUI that can be launched from a stand-alone executable.
+YouTube Bulk Upload provides a Graphical User Interface (GUI) that can be launched from a stand-alone executable.
 
-The GUI allows you to configure all the options available in the CLI through a user-friendly interface.
+The GUI allows you to configure all the options available and use the tool through a (somewhat) user-friendly interface.
 
 Download the executable (`.exe` or `.dmg`) for your operating system from the [Releases page](https://github.com/beveradb/youtube-bulk-upload/releases).
 
@@ -39,7 +39,26 @@ Once it loads, it should look something like this:
 
 ![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.2.1-Windows-GUI-Example.png)
 
-## Installation (Command Line)
+## Usage (GUI))
+
+👀 [Watch this tutorial video](https://www.youtube.com/watch?v=3QRQYoUknNw) for a better explanation and demonstration of how to use this tool.
+
+YouTube Bulk Upload helps you upload videos to YouTube in bulk from a single folder, with custom metadata derived from the video file names.
+
+To use it, you'll need a YouTube Data API Client Secret (JSON file) - reach out to Andrew if you aren't sure where to get this!
+
+Once you have that, you can point this tool at a directory of video files and it will upload them to YouTube, generating titles based on the filename, setting descriptions based on a template file, and optionally using a dedicated thumbnail image for each video in the same directory.
+
+I highly recommend testing it out with "Dry Run" enabled first, in which mode it will log exactly what it is doing but won't actually upload anything.
+
+Once you have confidence that your settings are correct and you're ready to execute it in bulk on a large number of files, tick the "Non-interactive" checkbox and it will no longer prompt you with popups asking for confirmation.
+
+The find/replace patterns for video titles, thumbnail filenames, and YouTube descriptions all support regular expressions and empty replacement strings, or they can be left blank if you don't need to use them.
+
+Hover over any element in the user interface for a tooltip popup explanation of that functionality.
+
+
+## Installation (CLI)
 
 To install YouTube Bulk Upload, ensure you have Python 3.9 or newer installed on your system. You can then install the tool using pip:
 
@@ -65,8 +84,9 @@ Refer to the CLI help for more options:
 youtube-bulk-upload --help
 ```
 
-### Integrating as a Package
-You can also use YouTube Bulk Upload as a package in your Python scripts. Here's a basic example of how to use it:
+## Integrating as a Package
+
+You can also use YouTube Bulk Upload as a package in your own Python code. Here's a basic example of how to use it:
 
 ```bash
 from youtube_bulk_upload.bulk_upload import YouTubeBulkUpload
@@ -81,6 +101,11 @@ uploaded_videos = uploader.process()
 ```
 
 This script initializes the uploader with a source directory and a client secrets file, then starts the upload process in dry run mode.
+
+All of the parameters available in the CLI (`youtube-bulk-upload --help`) are available in the `YouTubeBulkUpload` class.
+
+For details, see the code in `youtube_bulk_upload/bulk_upload.py`.
+For an example, see the CLI usage in `youtube_bulk_upload/cli.py`.
 
 ## License
 YouTube Bulk Upload is released under the MIT License. See the LICENSE file for more details.

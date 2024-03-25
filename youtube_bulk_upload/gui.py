@@ -98,7 +98,7 @@ class YouTubeBulkUploaderGUI:
         self.upload_thread = None
         self.stop_event = threading.Event()
 
-        self.dry_run_var = tk.BooleanVar()
+        self.dry_run_var = tk.BooleanVar(value=True)
         self.noninteractive_var = tk.BooleanVar()
         self.source_directory_var = tk.StringVar(value=os.path.expanduser("~"))
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
@@ -151,22 +151,39 @@ class YouTubeBulkUploaderGUI:
 
         message = """Welcome to YouTube Bulk Uploader!
 
-        This tool helps you upload videos to YouTube in bulk with custom metadata settings.
+This tool helps you upload videos to YouTube in bulk with custom metadata derived from the video file names.
 
-        Please watch Andrew's tutorial video on YouTube to understand how to use it:
+To use it, you'll need a YouTube Data API Client Secret (JSON file) - reach out to Andrew if you aren't sure where to get this!
 
-        https://www.youtube.com/watch?v=3QRQYoUknNw
+Once you have that, you can point this tool at a directory of video files and it will upload them to YouTube, generating titles based on the filename, setting descriptions based on a template file, and optionally using a dedicated thumbnail image for each video in the same directory.
 
-        Happy uploading!"""
+I highly recommend testing it out with "Dry Run" enabled first, in which mode it will log exactly what it is doing but won't actually upload anything.
 
-        tk.Label(welcome_window, text=message, wraplength=400).pack(padx=20, pady=10)
+Once you have confidence that your settings are correct and you're ready to execute it in bulk on a large number of files, tick the "Non-interactive" checkbox and it will no longer prompt you with popups asking for confirmation.
+
+The find/replace patterns for video titles, thumbnail filenames, and YouTube descriptions all support regular expressions and empty replacement strings, or they can be left blank if you don't need to use them.
+
+Hover over any element in the user interface for a tooltip popup explanation of that functionality.
+
+Click the "Watch Tutorial" button below to watch the tutorial video before trying to use it!
+
+Happy uploading!
+-Andrew <andrew@beveridge.uk>"""
+
+        tk.Label(welcome_window, text=message, wraplength=600, justify="left").pack(padx=20, pady=10)
 
         dont_show_again = tk.Checkbutton(welcome_window, text="Don't show this message again", variable=self.dont_show_welcome_message_var)
         dont_show_again.pack()
+        button_frame = tk.Frame(welcome_window)
+        button_frame.pack(pady=10)
 
-        close_button = tk.Button(welcome_window, text="Close", command=welcome_window.destroy)
-        close_button.pack(pady=10)
+        video_button = tk.Button(
+            button_frame, text="Watch Tutorial", command=lambda: self.open_link("https://www.youtube.com/watch?v=3QRQYoUknNw")
+        )
+        video_button.pack(side=tk.LEFT, padx=5)
 
+        close_button = tk.Button(button_frame, text="Close", command=welcome_window.destroy)
+        close_button.pack(side=tk.LEFT, padx=5)
         # Update the window to calculate its size
         welcome_window.update_idletasks()
 
@@ -181,6 +198,11 @@ class YouTubeBulkUploaderGUI:
         # Position the window in the center of the parent window
         welcome_window.geometry(f"+{position_right}+{position_down}")
 
+    def open_link(self, url):
+        import webbrowser
+
+        webbrowser.open(url)
+
     def load_gui_config_options(self):
         self.logger.info(f"Loading GUI configuration values from file: {self.gui_config_filepath}")
 
@@ -189,7 +211,7 @@ class YouTubeBulkUploaderGUI:
                 config = json.load(f)
                 # Set the variables' values from the config file
                 self.log_level_var.set(config.get("log_level", "info"))
-                self.dry_run_var.set(config.get("dry_run", False))
+                self.dry_run_var.set(config.get("dry_run", True))
                 self.noninteractive_var.set(config.get("noninteractive", False))
                 self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
                 self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))

@@ -41,7 +41,7 @@ Once it loads, it should look something like this:
 
 ## Usage (GUI))
 
-👀 [Watch this tutorial video](https://www.youtube.com/watch?v=3QRQYoUknNw) for a better explanation and demonstration of how to use this tool.
+👀 [Watch this tutorial video](https://youtu.be/9WklrdupZhg) for a better explanation and demonstration of how to use this tool.
 
 YouTube Bulk Upload helps you upload videos to YouTube in bulk from a single folder, with custom metadata derived from the video file names.
 

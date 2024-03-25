@@ -112,7 +112,7 @@ Happy uploading!
         button_frame.pack(pady=10)
 
         video_button = tk.Button(
-            button_frame, text="Watch Tutorial", command=lambda: self.open_link("https://www.youtube.com/watch?v=3QRQYoUknNw")
+            button_frame, text="Watch Tutorial", command=lambda: self.open_link("https://youtu.be/9WklrdupZhg")
         )
         video_button.pack(side=tk.LEFT, padx=5)
 

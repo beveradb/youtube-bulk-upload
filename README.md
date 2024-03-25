@@ -25,11 +25,11 @@ Download the executable (`.exe` or `.dmg`) for your operating system from the [R
 
 Double-click the `.dmg` file to run the installer. Install the application by dragging the icon to your Applications folder:
 
-<img src="images/YouTubeBulkUpload-v0.2.1-Mac-GUI-Installer.png" alt="YouTube Bulk Upload GUI Example" height="300">
+<img src="images/YouTubeBulkUpload-v0.3.4-Mac-GUI-Installer.png" alt="YouTube Bulk Upload GUI Example" height="300">
 
 Then run the application from your Applications folder as normal, it should look something like this:
 
-![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.2.1-Mac-GUI-Example.png)
+![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.3.4-Mac-GUI-Example.png)
 
 ### Windows
 
@@ -37,7 +37,7 @@ Double-click the `.exe` file to run the application - it doesn't need to be inst
 
 Once it loads, it should look something like this:
 
-![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.2.1-Windows-GUI-Example.png)
+![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.3.4-Windows-GUI-Example.png)
 
 ## Usage (GUI))
 

@@ -264,15 +264,28 @@ Happy uploading!
 
         self.row += 1
 
-        # Run and Clear Log buttons
-        self.run_button = tk.Button(self.gui_root, text="Run", command=self.run_upload)
-        self.run_button.grid(row=self.row, column=0, padx=10, pady=5, sticky="ew")
+        # Create a frame that spans across two columns of the main grid
+        button_frame = tk.Frame(self.gui_root)
+        button_frame.grid(row=self.row, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
+
+        # Configure the frame's grid to have three columns with equal weight
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+        button_frame.grid_columnconfigure(2, weight=1)
+
+        # Place the buttons inside the frame, each in its own column
+        self.run_button = tk.Button(button_frame, text="Run", command=self.run_upload)
+        self.run_button.grid(row=0, column=0, sticky="ew")
         Tooltip(
             self.run_button, "Starts the process of uploading videos! Please ensure you have tested your settings in Dry Run mode first!"
         )
 
-        self.clear_log_button = tk.Button(self.gui_root, text="Clear Log", command=self.clear_log)
-        self.clear_log_button.grid(row=self.row, column=1, padx=10, pady=5, sticky="ew")
+        self.stop_button = tk.Button(button_frame, text="Stop", command=self.stop_operation)
+        self.stop_button.grid(row=0, column=1, sticky="ew")
+        Tooltip(self.stop_button, "Stops the current operation, if running.")
+
+        self.clear_log_button = tk.Button(button_frame, text="Clear Log", command=self.clear_log)
+        self.clear_log_button.grid(row=0, column=2, sticky="ew")
         Tooltip(self.clear_log_button, "Clears the log output below.")
 
         self.row += 1
@@ -551,8 +564,14 @@ Happy uploading!
         self.gui_root.after(0, prompt)
         return None  # Immediate return; we'll wait for the input
 
+    def stop_operation(self):
+        self.logger.info("Stopping current operation")
+        self.stop_event.set()
+
     def run_upload(self):
         self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
+
+        self.stop_event.clear()
 
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()

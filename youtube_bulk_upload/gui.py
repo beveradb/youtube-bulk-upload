@@ -12,75 +12,6 @@ from tkinter import filedialog, messagebox, scrolledtext, simpledialog
 from youtube_bulk_upload import YouTubeBulkUpload
 
 
-class ReusableWidgetFrame(tk.LabelFrame):
-    def __init__(self, parent, logger, title, **kwargs):
-        self.logger = logger
-        self.logger.debug(f"Initializing ReusableWidgetFrame with title: {title}")
-        kwargs.setdefault("padx", 10)  # Add default padding on the x-axis
-        kwargs.setdefault("pady", 10)  # Add default padding on the y-axis
-        super().__init__(parent, text=title, **kwargs)
-        self.find_var = tk.StringVar()
-        self.replace_var = tk.StringVar()
-        self.row = 0  # Keep track of the next row index to add widgets
-
-    def new_row(self):
-        self.logger.debug("Adding a new row in ReusableWidgetFrame")
-        self.row += 1
-
-    def add_widgets(self, widgets):
-        self.logger.debug(f"Adding widgets: {widgets}")
-        for widget in widgets:
-            widget.grid(row=self.row, column=0, columnspan=2, sticky="ew", padx=5, pady=2)
-            self.row += 1
-
-    def add_find_replace_widgets(self, label_text):
-        self.logger.debug(f"Adding find/replace widgets with label: {label_text}")
-        tk.Label(self, text=label_text).grid(row=self.row, column=0, sticky="w")
-
-        # Listbox with a scrollbar for replacements
-        self.row += 1
-        self.replacements_listbox = tk.Listbox(self, height=4, width=50)
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=self.replacements_listbox.yview)
-        self.replacements_listbox.config(yscrollcommand=scrollbar.set)
-        self.replacements_listbox.grid(row=self.row, column=0, columnspan=2, sticky="nsew", padx=(5, 0), pady=5)
-        scrollbar.grid(row=self.row, column=2, sticky="ns", pady=5)
-
-        # Entry fields for adding new find/replace pairs
-        self.row += 1
-        tk.Entry(self, textvariable=self.find_var, width=20).grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=(5, 0))
-        tk.Entry(self, textvariable=self.replace_var, width=20).grid(row=self.row, column=1, sticky="ew", pady=(5, 0))
-
-        # Buttons for adding and removing replacements
-        self.row += 1
-        add_button = tk.Button(self, text="Add Replacement", command=self.add_replacement)
-        add_button.grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=5)
-        remove_button = tk.Button(self, text="Remove Selected", command=self.remove_replacement)
-        remove_button.grid(row=self.row, column=1, sticky="ew", pady=5)
-
-    def add_replacement(self):
-        self.logger.debug("Adding a replacement")
-        find_text = self.find_var.get()
-        replace_text = self.replace_var.get()
-        if find_text:
-            self.replacements_listbox.insert(tk.END, f"{find_text} -> {replace_text}")
-            self.find_var.set("")
-            self.replace_var.set("")
-
-    def remove_replacement(self):
-        self.logger.debug("Removing selected replacements")
-        selected_indices = self.replacements_listbox.curselection()
-        for i in reversed(selected_indices):
-            self.replacements_listbox.delete(i)
-
-    def get_replacements(self):
-        replacements = []
-        listbox_items = self.replacements_listbox.get(0, tk.END)
-        for item in listbox_items:
-            find, replace = item.split(" -> ")
-            replacements.append((find, replace))
-        return replacements
-
-
 class YouTubeBulkUploaderGUI:
     def __init__(self, gui_root: tk.Tk, logger: logging.Logger, bundle_dir: Path, running_in_pyinstaller: bool):
         self.logger = logger
@@ -101,7 +32,10 @@ class YouTubeBulkUploaderGUI:
         self.dry_run_var = tk.BooleanVar(value=True)
         self.noninteractive_var = tk.BooleanVar()
         self.source_directory_var = tk.StringVar(value=os.path.expanduser("~"))
+
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
+        self.upload_batch_limit_var = tk.IntVar(value=100)
+        self.input_file_extensions_var = tk.StringVar(value=".mp4 .mov")
         self.yt_category_id_var = tk.StringVar(value="10")
         self.yt_keywords_var = tk.StringVar(value="music")
         self.yt_desc_template_file_var = tk.StringVar()
@@ -215,6 +149,8 @@ Happy uploading!
                 self.noninteractive_var.set(config.get("noninteractive", False))
                 self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
                 self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))
+                self.upload_batch_limit_var.set(config.get("upload_batch_limit", 100))
+                self.input_file_extensions_var.set(config.get("input_file_extensions", ".mp4 .mov"))
                 self.yt_category_id_var.set(config.get("yt_category_id", "10"))
                 self.yt_keywords_var.set(config.get("yt_keywords", "music"))
                 self.yt_desc_template_file_var.set(config.get("yt_desc_template_file", ""))
@@ -255,6 +191,8 @@ Happy uploading!
             "noninteractive": self.noninteractive_var.get(),
             "source_directory": self.source_directory_var.get(),
             "yt_client_secrets_file": self.yt_client_secrets_file_var.get(),
+            "input_file_extensions": self.input_file_extensions_var.get(),
+            "upload_batch_limit": self.upload_batch_limit_var.get(),
             "yt_category_id": self.yt_category_id_var.get(),
             "yt_keywords": self.yt_keywords_var.get(),
             "yt_desc_template_file": self.yt_desc_template_file_var.get(),
@@ -272,7 +210,7 @@ Happy uploading!
             json.dump(config, f, indent=4)
 
     def on_log_level_change(self, *args):
-        self.logger.debug(f"Log level changed to: {self.log_level_var.get()}")
+        self.logger.info(f"Log level changed to: {self.log_level_var.get()}")
 
         # Get log level string value from GUI
         log_level_str = self.log_level_var.get()
@@ -343,49 +281,103 @@ Happy uploading!
     def add_general_options_widgets(self):
         frame = self.general_frame
 
-        tk.Label(self.general_frame, text="Log Level:").grid(row=frame.row, column=0, sticky="w")
-        tk.OptionMenu(self.general_frame, self.log_level_var, "info", "warning", "error", "debug").grid(
-            row=frame.row, column=1, sticky="ew"
+        # Log Level Label with Tooltip
+        log_level_label = tk.Label(self.general_frame, text="Log Level:")
+        log_level_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(log_level_label, "Sets the verbosity of the application logs, which are written to the text box below and also a log file.")
+
+        # Log Level OptionMenu with Tooltip
+        log_level_option_menu = tk.OptionMenu(self.general_frame, self.log_level_var, "info", "warning", "error", "debug")
+        log_level_option_menu.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(log_level_option_menu, "Choose between Info, Warning, Error, or Debug log levels.")
+
+        frame.new_row()
+
+        dry_run_checkbutton = tk.Checkbutton(self.general_frame, text="Dry Run", variable=self.dry_run_var)
+        dry_run_checkbutton.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(
+            dry_run_checkbutton,
+            "Simulates the upload process without posting videos to YouTube. Keep this enabled until you have tested your settings!",
+        )
+
+        noninteractive_checkbutton = tk.Checkbutton(self.general_frame, text="Non-interactive", variable=self.noninteractive_var)
+        noninteractive_checkbutton.grid(row=frame.row, column=1, sticky="w")
+        Tooltip(
+            noninteractive_checkbutton,
+            "Runs the upload process without manual intervention. Enable this once you've tested your settings and you're ready to bulk process!",
         )
 
         frame.new_row()
-        tk.Checkbutton(self.general_frame, text="Dry Run", variable=self.dry_run_var).grid(row=frame.row, column=0, sticky="w")
-        tk.Checkbutton(self.general_frame, text="Non-interactive", variable=self.noninteractive_var).grid(
-            row=frame.row, column=1, sticky="w"
-        )
 
-        frame.new_row()
-        tk.Label(self.general_frame, text="Source Directory:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.general_frame, textvariable=self.source_directory_var).grid(row=frame.row, column=1, sticky="ew")
-        tk.Button(self.general_frame, text="Browse...", command=self.select_source_directory).grid(row=frame.row, column=2, sticky="ew")
+        source_dir_label = tk.Label(self.general_frame, text="Source Directory:")
+        source_dir_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(source_dir_label, "The directory where your video files are located.")
+
+        source_dir_entry = tk.Entry(self.general_frame, textvariable=self.source_directory_var)
+        source_dir_entry.grid(row=frame.row, column=1, sticky="ew")
+        source_dir_browse_button = tk.Button(self.general_frame, text="Browse...", command=self.select_source_directory)
+        source_dir_browse_button.grid(row=frame.row, column=2, sticky="ew")
+        Tooltip(source_dir_browse_button, "Open a dialog to select the source directory where your video files are located.")
 
         # YouTube Client Secrets File
         frame.new_row()
-        tk.Label(self.general_frame, text="YouTube Client Secrets File:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.general_frame, textvariable=self.yt_client_secrets_file_var).grid(row=frame.row, column=1, sticky="ew")
-        tk.Button(self.general_frame, text="Browse...", command=self.select_client_secrets_file).grid(row=frame.row, column=2, sticky="ew")
+
+        yt_client_secrets_label = tk.Label(self.general_frame, text="YouTube Client Secret File:")
+        yt_client_secrets_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(
+            yt_client_secrets_label,
+            "The JSON file containing your YouTube Data API client secret credentials. If you aren't sure how to get this, ask Andrew!",
+        )
+
+        yt_client_secrets_entry = tk.Entry(self.general_frame, textvariable=self.yt_client_secrets_file_var)
+        yt_client_secrets_entry.grid(row=frame.row, column=1, sticky="ew")
+        yt_client_secrets_browse_button = tk.Button(self.general_frame, text="Browse...", command=self.select_client_secrets_file)
+        yt_client_secrets_browse_button.grid(row=frame.row, column=2, sticky="ew")
+        Tooltip(yt_client_secrets_browse_button, "Open a dialog to select the YouTube client secret file.")
 
         # Input File Extensions
         frame.new_row()
-        tk.Label(self.general_frame, text="Input File Extensions:").grid(row=frame.row, column=0, sticky="w")
-        self.input_file_extensions_var = tk.StringVar(value=".mp4 .mov")  # Default value
-        tk.Entry(self.general_frame, textvariable=self.input_file_extensions_var).grid(row=frame.row, column=1, sticky="ew")
+        file_extensions_label = tk.Label(self.general_frame, text="Input File Extensions:")
+        file_extensions_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(
+            file_extensions_label,
+            "The file extension(s) for videos you want to upload from the source folder. Separate multiple extensions with a space.",
+        )
+
+        file_extensions_entry = tk.Entry(self.general_frame, textvariable=self.input_file_extensions_var)
+        file_extensions_entry.grid(row=frame.row, column=1, sticky="ew")
 
         # Upload Batch Limit
         frame.new_row()
-        tk.Label(self.general_frame, text="Upload Batch Limit:").grid(row=frame.row, column=0, sticky="w")
-        self.upload_batch_limit_var = tk.IntVar(value=100)  # Default value
-        tk.Entry(self.general_frame, textvariable=self.upload_batch_limit_var).grid(row=frame.row, column=1, sticky="ew")
+
+        batch_limit_label = tk.Label(self.general_frame, text="Upload Batch Limit:")
+        batch_limit_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(
+            batch_limit_label,
+            "The maximum number of videos to upload in a single batch. YouTube allows a maximum of 100 videos per 24 hour period!",
+        )
+
+        batch_limit_entry = tk.Entry(self.general_frame, textvariable=self.upload_batch_limit_var)
+        batch_limit_entry.grid(row=frame.row, column=1, sticky="ew")
 
         # YouTube Category ID
         frame.new_row()
-        tk.Label(self.general_frame, text="YouTube Category ID:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.general_frame, textvariable=self.yt_category_id_var).grid(row=frame.row, column=1, sticky="ew")
+
+        yt_category_label = tk.Label(self.general_frame, text="YouTube Category ID:")
+        yt_category_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(yt_category_label, "The ID of the YouTube category under which the videos will be uploaded.")
+
+        yt_category_entry = tk.Entry(self.general_frame, textvariable=self.yt_category_id_var)
+        yt_category_entry.grid(row=frame.row, column=1, sticky="ew")
 
         # YouTube Keywords
         frame.new_row()
-        tk.Label(self.general_frame, text="YouTube Keywords:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.general_frame, textvariable=self.yt_keywords_var).grid(row=frame.row, column=1, sticky="ew")
+        yt_keywords_label = tk.Label(self.general_frame, text="YouTube Keywords:")
+        yt_keywords_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(yt_keywords_label, "Keywords to be added to the video metadata. Separate multiple keywords with a comma.")
+
+        yt_keywords_entry = tk.Entry(self.general_frame, textvariable=self.yt_keywords_var)
+        yt_keywords_entry.grid(row=frame.row, column=1, sticky="ew")
 
     def add_youtube_title_widgets(self):
         frame = self.youtube_title_frame
@@ -603,6 +595,115 @@ Happy uploading!
         self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing
         self.log_output.delete("1.0", tk.END)
         self.log_output.config(state=tk.DISABLED)  # Disable text widget after clearing
+
+
+class ReusableWidgetFrame(tk.LabelFrame):
+    def __init__(self, parent, logger, title, **kwargs):
+        self.logger = logger
+        self.logger.debug(f"Initializing ReusableWidgetFrame with title: {title}")
+        kwargs.setdefault("padx", 10)  # Add default padding on the x-axis
+        kwargs.setdefault("pady", 10)  # Add default padding on the y-axis
+        super().__init__(parent, text=title, **kwargs)
+        self.find_var = tk.StringVar()
+        self.replace_var = tk.StringVar()
+        self.row = 0  # Keep track of the next row index to add widgets
+
+    def new_row(self):
+        self.logger.debug("Adding a new row in ReusableWidgetFrame")
+        self.row += 1
+
+    def add_widgets(self, widgets):
+        self.logger.debug(f"Adding widgets: {widgets}")
+        for widget in widgets:
+            widget.grid(row=self.row, column=0, columnspan=2, sticky="ew", padx=5, pady=2)
+            self.row += 1
+
+    def add_find_replace_widgets(self, label_text):
+        self.logger.debug(f"Adding find/replace widgets with label: {label_text}")
+        tk.Label(self, text=label_text).grid(row=self.row, column=0, sticky="w")
+
+        # Listbox with a scrollbar for replacements
+        self.row += 1
+        self.replacements_listbox = tk.Listbox(self, height=4, width=50)
+        scrollbar = tk.Scrollbar(self, orient="vertical", command=self.replacements_listbox.yview)
+        self.replacements_listbox.config(yscrollcommand=scrollbar.set)
+        self.replacements_listbox.grid(row=self.row, column=0, columnspan=2, sticky="nsew", padx=(5, 0), pady=5)
+        scrollbar.grid(row=self.row, column=2, sticky="ns", pady=5)
+
+        # Entry fields for adding new find/replace pairs
+        self.row += 1
+        tk.Entry(self, textvariable=self.find_var, width=20).grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=(5, 0))
+        tk.Entry(self, textvariable=self.replace_var, width=20).grid(row=self.row, column=1, sticky="ew", pady=(5, 0))
+
+        # Buttons for adding and removing replacements
+        self.row += 1
+        add_button = tk.Button(self, text="Add Replacement", command=self.add_replacement)
+        add_button.grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=5)
+        remove_button = tk.Button(self, text="Remove Selected", command=self.remove_replacement)
+        remove_button.grid(row=self.row, column=1, sticky="ew", pady=5)
+
+    def add_replacement(self):
+        self.logger.debug("Adding a replacement")
+        find_text = self.find_var.get()
+        replace_text = self.replace_var.get()
+        if find_text:
+            self.replacements_listbox.insert(tk.END, f"{find_text} -> {replace_text}")
+            self.find_var.set("")
+            self.replace_var.set("")
+
+    def remove_replacement(self):
+        self.logger.debug("Removing selected replacements")
+        selected_indices = self.replacements_listbox.curselection()
+        for i in reversed(selected_indices):
+            self.replacements_listbox.delete(i)
+
+    def get_replacements(self):
+        replacements = []
+        listbox_items = self.replacements_listbox.get(0, tk.END)
+        for item in listbox_items:
+            find, replace = item.split(" -> ")
+            replacements.append((find, replace))
+        return replacements
+
+
+class Tooltip:
+    """
+    Create a tooltip for a given widget.
+    """
+
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+
+    def enter(self, event=None):
+        x, y, cx, cy = self.widget.bbox("insert")  # Get widget size
+        x += self.widget.winfo_rootx()
+        y += self.widget.winfo_rooty() + 28
+        # Create a toplevel window with required properties
+        self.tooltip_window = tk.Toplevel(self.widget)
+        self.tooltip_window.wm_overrideredirect(True)
+        self.tooltip_window.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(
+            self.tooltip_window,
+            text=self.text,
+            justify="left",
+            padx=5,
+            pady=5,
+            borderwidth=1,
+            relief="solid",
+            highlightbackground="#00FF00",
+            highlightcolor="#00FF00",
+            highlightthickness=1,
+        )
+        label.pack(ipadx=1)
+
+    def leave(self, event=None):
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+            self.tooltip_window = None
 
 
 class TextHandler(logging.Handler):

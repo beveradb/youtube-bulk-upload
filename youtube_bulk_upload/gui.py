@@ -267,16 +267,27 @@ Happy uploading!
         # Run and Clear Log buttons
         self.run_button = tk.Button(self.gui_root, text="Run", command=self.run_upload)
         self.run_button.grid(row=self.row, column=0, padx=10, pady=5, sticky="ew")
+        Tooltip(
+            self.run_button, "Starts the process of uploading videos! Please ensure you have tested your settings in Dry Run mode first!"
+        )
+
         self.clear_log_button = tk.Button(self.gui_root, text="Clear Log", command=self.clear_log)
         self.clear_log_button.grid(row=self.row, column=1, padx=10, pady=5, sticky="ew")
+        Tooltip(self.clear_log_button, "Clears the log output below.")
 
         self.row += 1
 
         # Log output at the bottom spanning both columns
-        tk.Label(self.gui_root, text="Log Output:").grid(row=self.row, column=0, columnspan=2, sticky="w")
+        log_output_label = tk.Label(self.gui_root, text="Log Output:")
+        log_output_label.grid(row=self.row, column=0, columnspan=2, sticky="w")
+        Tooltip(
+            log_output_label,
+            "Displays the log of all operations, including text replacements, successful and failed uploads. If something isn't working as expected, please read this log before asking for help.",
+        )
+
         self.log_output = scrolledtext.ScrolledText(self.gui_root, height=10)
         self.log_output.grid(row=self.row, column=0, columnspan=2, padx=10, pady=5, sticky="nsew")
-        self.log_output.config(state=tk.DISABLED)  # Make log output read-only
+        self.log_output.config(state=tk.DISABLED)
 
     def add_general_options_widgets(self):
         frame = self.general_frame
@@ -381,44 +392,90 @@ Happy uploading!
 
     def add_youtube_title_widgets(self):
         frame = self.youtube_title_frame
-        tk.Label(self.youtube_title_frame, text="Prefix:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.youtube_title_frame, textvariable=self.yt_title_prefix_var).grid(row=frame.row, column=1, sticky="ew")
+
+        prefix_label = tk.Label(self.youtube_title_frame, text="Prefix:")
+        prefix_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(prefix_label, "Prefix to add to the beginning of the video filename to create your preferred YouTube video title.")
+
+        prefix_entry = tk.Entry(self.youtube_title_frame, textvariable=self.yt_title_prefix_var)
+        prefix_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(prefix_entry, "Enter the prefix text here.")
 
         frame.new_row()
-        tk.Label(self.youtube_title_frame, text="Suffix:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.youtube_title_frame, textvariable=self.yt_title_suffix_var).grid(row=frame.row, column=1, sticky="ew")
+
+        suffix_label = tk.Label(self.youtube_title_frame, text="Suffix:")
+        suffix_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(suffix_label, "Suffix to add to the end of the video filename to create your preferred YouTube video title.")
+
+        suffix_entry = tk.Entry(self.youtube_title_frame, textvariable=self.yt_title_suffix_var)
+        suffix_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(suffix_entry, "Enter the suffix text here.")
 
         frame.new_row()
-        self.youtube_title_frame.add_find_replace_widgets("Find / Replace Patterns:")
+        self.youtube_title_frame.add_find_replace_widgets(
+            "Find / Replace Patterns:",
+            "Define regex patterns for finding and replacing text in the video filename to create your preferred YouTube video title.",
+        )
 
     def add_youtube_description_widgets(self):
         frame = self.youtube_desc_frame
-        tk.Label(self.youtube_desc_frame, text="Template File:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.youtube_desc_frame, textvariable=self.yt_desc_template_file_var, state="readonly").grid(
-            row=frame.row, column=1, sticky="ew"
-        )
-        tk.Button(self.youtube_desc_frame, text="Browse...", command=self.select_yt_desc_template_file).grid(
-            row=frame.row, column=2, sticky="ew"
-        )
+
+        template_file_label = tk.Label(self.youtube_desc_frame, text="Template File:")
+        template_file_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(template_file_label, "Path to the template file used for YouTube video descriptions.")
+
+        template_file_entry = tk.Entry(self.youtube_desc_frame, textvariable=self.yt_desc_template_file_var, state="readonly")
+        template_file_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(template_file_entry, "Displays the file path of the selected template file. This field is read-only.")
+
+        browse_button = tk.Button(self.youtube_desc_frame, text="Browse...", command=self.select_yt_desc_template_file)
+        browse_button.grid(row=frame.row, column=2, sticky="ew")
+        Tooltip(browse_button, "Open a dialog to select the template file for YouTube video descriptions.")
 
         frame.new_row()
-        self.youtube_desc_frame.add_find_replace_widgets("Find / Replace Patterns:")
+        self.youtube_desc_frame.add_find_replace_widgets(
+            "Find / Replace Patterns:",
+            "Define regex patterns to find & replace text in the template to generate the desired description for each video. Use {{youtube_title}} in a replacement string to inject the video title.",
+        )
 
     def add_thumbnail_options_widgets(self):
         frame = self.thumbnail_frame
-        tk.Label(self.thumbnail_frame, text="Filename Prefix:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_prefix_var).grid(row=frame.row, column=1, sticky="ew")
+        filename_prefix_label = tk.Label(self.thumbnail_frame, text="Filename Prefix:")
+        filename_prefix_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(filename_prefix_label, "Prefix to add to the beginning of the video filename to match your thumbnail filename pattern.")
+
+        filename_prefix_entry = tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_prefix_var)
+        filename_prefix_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(
+            filename_prefix_entry,
+            "Enter the prefix for thumbnail filenames here. If not working as expected, see the log output to understand how this works.",
+        )
 
         frame.new_row()
-        tk.Label(self.thumbnail_frame, text="Filename Suffix:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_suffix_var).grid(row=frame.row, column=1, sticky="ew")
+        filename_suffix_label = tk.Label(self.thumbnail_frame, text="Filename Suffix:")
+        filename_suffix_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(filename_suffix_label, "Suffix to add to the end of the video filename to match your thumbnail filename pattern.")
+
+        filename_suffix_entry = tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_suffix_var)
+        filename_suffix_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(
+            filename_suffix_entry,
+            "Enter the suffix for thumbnail filenames here. If not working as expected, see the log output to understand how this works.",
+        )
 
         frame.new_row()
-        tk.Label(self.thumbnail_frame, text="File Extensions:").grid(row=frame.row, column=0, sticky="w")
-        tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_extensions_var).grid(row=frame.row, column=1, sticky="ew")
+        file_extensions_label = tk.Label(self.thumbnail_frame, text="File Extensions:")
+        file_extensions_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(file_extensions_label, "Allowed file extensions for thumbnails.")
+
+        file_extensions_entry = tk.Entry(self.thumbnail_frame, textvariable=self.thumb_file_extensions_var)
+        file_extensions_entry.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(file_extensions_entry, "Enter the allowed file extensions for thumbnails, separated by spaces.")
 
         frame.new_row()
-        self.thumbnail_frame.add_find_replace_widgets("Find / Replace Patterns:")
+        self.thumbnail_frame.add_find_replace_widgets(
+            "Find / Replace Patterns:", "Define regex patterns for finding and replacing text in thumbnail filenames."
+        )
 
     def set_window_icon(self):
         self.logger.info("Setting window icon to app logo")
@@ -503,7 +560,7 @@ Happy uploading!
         yt_client_secrets_file = self.yt_client_secrets_file_var.get()
         yt_category_id = self.yt_category_id_var.get()
         yt_keywords = self.yt_keywords_var.get().split()
-        yt_desc_template_file = self.yt_desc_template_file_var.get()
+        yt_desc_template_file = self.yt_desc_template_file_var.get() or None
         yt_title_prefix = self.yt_title_prefix_var.get()
         yt_title_suffix = self.yt_title_suffix_var.get()
         thumb_file_prefix = self.thumb_file_prefix_var.get()
@@ -618,9 +675,12 @@ class ReusableWidgetFrame(tk.LabelFrame):
             widget.grid(row=self.row, column=0, columnspan=2, sticky="ew", padx=5, pady=2)
             self.row += 1
 
-    def add_find_replace_widgets(self, label_text):
+    def add_find_replace_widgets(self, label_text, summary_tooltip_text):
         self.logger.debug(f"Adding find/replace widgets with label: {label_text}")
-        tk.Label(self, text=label_text).grid(row=self.row, column=0, sticky="w")
+
+        label = tk.Label(self, text=label_text)
+        label.grid(row=self.row, column=0, sticky="w")
+        Tooltip(label, summary_tooltip_text)
 
         # Listbox with a scrollbar for replacements
         self.row += 1
@@ -629,11 +689,19 @@ class ReusableWidgetFrame(tk.LabelFrame):
         self.replacements_listbox.config(yscrollcommand=scrollbar.set)
         self.replacements_listbox.grid(row=self.row, column=0, columnspan=2, sticky="nsew", padx=(5, 0), pady=5)
         scrollbar.grid(row=self.row, column=2, sticky="ns", pady=5)
+        Tooltip(self.replacements_listbox, "Currently active find/replace pairs.")
 
         # Entry fields for adding new find/replace pairs
         self.row += 1
-        tk.Entry(self, textvariable=self.find_var, width=20).grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=(5, 0))
-        tk.Entry(self, textvariable=self.replace_var, width=20).grid(row=self.row, column=1, sticky="ew", pady=(5, 0))
+        find_entry = tk.Entry(self, textvariable=self.find_var, width=20)
+        find_entry.grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=(5, 0))
+        replace_entry = tk.Entry(self, textvariable=self.replace_var, width=20)
+        replace_entry.grid(row=self.row, column=1, sticky="ew", pady=(5, 0))
+        Tooltip(find_entry, "Enter text to find. Supports regex syntax for advanced patterns, e.g. [0-9]+ for a sequence of digits.")
+        Tooltip(
+            replace_entry,
+            "Enter replacement text. Use regex syntax for advanced patterns, including references to capture strings in the matched text. Leave blank to delete matched text.",
+        )
 
         # Buttons for adding and removing replacements
         self.row += 1
@@ -641,6 +709,8 @@ class ReusableWidgetFrame(tk.LabelFrame):
         add_button.grid(row=self.row, column=0, sticky="ew", padx=(5, 0), pady=5)
         remove_button = tk.Button(self, text="Remove Selected", command=self.remove_replacement)
         remove_button.grid(row=self.row, column=1, sticky="ew", pady=5)
+        Tooltip(add_button, "Add a new find/replace pair.")
+        Tooltip(remove_button, "Remove the selected find/replace pair.")
 
     def add_replacement(self):
         self.logger.debug("Adding a replacement")
@@ -679,9 +749,16 @@ class Tooltip:
         self.widget.bind("<Leave>", self.leave)
 
     def enter(self, event=None):
-        x, y, cx, cy = self.widget.bbox("insert")  # Get widget size
-        x += self.widget.winfo_rootx()
-        y += self.widget.winfo_rooty() + 28
+        # Get the widget's location on the screen
+        x = self.widget.winfo_rootx()
+        y = self.widget.winfo_rooty()
+        # Adjust the y-coordinate to show the tooltip above the widget or at its top
+        y += 28  # Adjust this value as needed to position the tooltip correctly
+
+        # x, y, cx, cy = self.widget.bbox("insert")  # Get widget size
+        # x += self.widget.winfo_rootx()
+        # y += self.widget.winfo_rooty() + 28
+
         # Create a toplevel window with required properties
         self.tooltip_window = tk.Toplevel(self.widget)
         self.tooltip_window.wm_overrideredirect(True)
@@ -697,6 +774,7 @@ class Tooltip:
             highlightbackground="#00FF00",
             highlightcolor="#00FF00",
             highlightthickness=1,
+            wraplength=350,
         )
         label.pack(ipadx=1)
 

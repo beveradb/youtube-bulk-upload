@@ -9,9 +9,15 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload
+from enum import Enum
 
 YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v="
 
+
+class VideoPrivacyStatus(Enum): 
+    PUBLIC = "public"
+    PRIVATE = "private"
+    UNLISTED = "unlisted"
 
 class YouTubeBulkUpload:
     def __init__(
@@ -38,6 +44,7 @@ class YouTubeBulkUpload:
         thumbnail_filename_suffix=None,
         thumbnail_filename_replacements=None,
         thumbnail_filename_extensions=[".png", ".jpg", ".jpeg"],
+        privacy_status=VideoPrivacyStatus.PRIVATE,
     ):
         self.logger = logger
 
@@ -91,6 +98,8 @@ class YouTubeBulkUpload:
         self.thumbnail_filename_suffix = thumbnail_filename_suffix
         self.thumbnail_filename_replacements = thumbnail_filename_replacements
         self.thumbnail_filename_extensions = thumbnail_filename_extensions
+
+        self.privacy_status = privacy_status
 
         self.interactive_prompt = interactive_prompt
         self.upload_batch_limit = upload_batch_limit
@@ -177,6 +186,9 @@ class YouTubeBulkUpload:
                 self.logger.info(f"YouTube client secrets file is valid JSON: {self.youtube_client_secrets_file}")
         except json.JSONDecodeError as e:
             raise Exception(f"YouTube client secrets file is not valid JSON: {self.youtube_client_secrets_file}") from e
+        
+        if self.privacy_status not in VideoPrivacyStatus:
+            raise Exception(f"\"{self.privacy_status}\" is not a valid video privacy value. It must be private, public or unlisted") 
 
         self.logger.debug(f"YouTube upload checks passed")
 
@@ -264,7 +276,7 @@ class YouTubeBulkUpload:
         self.logger.info(f"Uploading video {video_file} to YouTube with title, description and thumbnail...")
         if self.dry_run:
             self.logger.info(
-                f"DRY RUN: Would upload {video_file} to YouTube with title: {youtube_title}, description: {youtube_description[:50]}... and thumbnail: {thumbnail_filepath}"
+                f"DRY RUN: Would upload {video_file} to YouTube with title: {youtube_title}, description: {youtube_description[:50]}... and thumbnail: {thumbnail_filepath} with Privacy Status: {self.privacy_status}"
             )
             return "dry-run-video-id"
         else:
@@ -278,7 +290,7 @@ class YouTubeBulkUpload:
                     "tags": self.youtube_keywords,
                     "categoryId": self.youtube_category_id,
                 },
-                "status": {"privacyStatus": "public"},
+                "status": {"privacyStatus": self.privacy_status},
             }
 
             # Use MediaFileUpload to handle the video file
@@ -440,6 +452,7 @@ class YouTubeBulkUpload:
                         f"Title: {youtube_title}?\n\n"
                         f"Thumbnail filepath: {thumbnail_filepath}\n\n"
                         f"Description: {youtube_description}\n\n"
+                        f"Privacy Status: {self.privacy_status}\n\n"
                         "Proceed with upload? (y/n): "
                     )
                     if self.prompt_user_bool(confirmation_prompt):

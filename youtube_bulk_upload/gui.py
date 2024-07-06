@@ -7,7 +7,7 @@ import pkg_resources
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, simpledialog
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 from youtube_bulk_upload import YouTubeBulkUpload
 from youtube_bulk_upload import VideoPrivacyStatus
@@ -290,6 +290,12 @@ Happy uploading!
         self.clear_log_button = tk.Button(button_frame, text="Clear Log", command=self.clear_log)
         self.clear_log_button.grid(row=0, column=2, sticky="ew")
         Tooltip(self.clear_log_button, "Clears the log output below.")
+
+        self.row += 1
+
+        # Progress bar spanning all three buttons
+        self.progress_bar = ttk.Progressbar(button_frame, orient="horizontal", mode="determinate")
+        self.progress_bar.grid(row=1, column=0, columnspan=3, pady=(10,0), sticky="ew")
 
         self.row += 1
 
@@ -583,6 +589,10 @@ Happy uploading!
         self.logger.info("Stopping current operation")
         self.stop_event.set()
 
+    def update_progress(self, progress):
+        self.logger.info(f"Progress is: {progress}")
+        self.progress_bar['value'] = progress*100
+
     def run_upload(self):
         self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
 
@@ -628,6 +638,7 @@ Happy uploading!
             youtube_description_replacements=youtube_description_replacements,
             youtube_title_replacements=youtube_title_replacements,
             thumbnail_filename_replacements=thumbnail_filename_replacements,
+            progress_callback_func=self.update_progress,
         )
 
         self.logger.info("Beginning YouTubeBulkUpload process thread...")

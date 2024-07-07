@@ -7,10 +7,10 @@ import pkg_resources
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, simpledialog
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 from youtube_bulk_upload import YouTubeBulkUpload
-
+from youtube_bulk_upload import VideoPrivacyStatus
 
 class YouTubeBulkUploaderGUI:
     def __init__(self, gui_root: tk.Tk, logger: logging.Logger, bundle_dir: Path, running_in_pyinstaller: bool):
@@ -44,6 +44,7 @@ class YouTubeBulkUploaderGUI:
         self.thumb_file_prefix_var = tk.StringVar()
         self.thumb_file_suffix_var = tk.StringVar()
         self.thumb_file_extensions_var = tk.StringVar(value=".png .jpg .jpeg")
+        self.privacy_status_var = tk.StringVar(value=VideoPrivacyStatus.PRIVATE.value)
         self.dont_show_welcome_message_var = tk.BooleanVar(value=False)
 
         # Fire off our clean shutdown function when the user requests to close the window
@@ -159,6 +160,7 @@ Happy uploading!
                 self.thumb_file_prefix_var.set(config.get("thumb_file_prefix", ""))
                 self.thumb_file_suffix_var.set(config.get("thumb_file_suffix", ""))
                 self.thumb_file_extensions_var.set(config.get("thumb_file_extensions", ".png .jpg .jpeg"))
+                self.privacy_status_var.set(config.get("privacy_status", VideoPrivacyStatus.PUBLIC.value))
                 self.dont_show_welcome_message_var = tk.BooleanVar(value=config.get("dont_show_welcome_message", False))
 
                 # Load replacement patterns
@@ -201,6 +203,7 @@ Happy uploading!
             "thumb_file_prefix": self.thumb_file_prefix_var.get(),
             "thumb_file_suffix": self.thumb_file_suffix_var.get(),
             "thumb_file_extensions": self.thumb_file_extensions_var.get(),
+            "privacy_status": self.privacy_status_var.get(),
             "youtube_description_replacements": youtube_description_replacements,
             "youtube_title_replacements": youtube_title_replacements,
             "thumbnail_filename_replacements": thumbnail_filename_replacements,
@@ -287,6 +290,12 @@ Happy uploading!
         self.clear_log_button = tk.Button(button_frame, text="Clear Log", command=self.clear_log)
         self.clear_log_button.grid(row=0, column=2, sticky="ew")
         Tooltip(self.clear_log_button, "Clears the log output below.")
+
+        self.row += 1
+
+        # Progress bar spanning all three buttons
+        self.progress_bar = ttk.Progressbar(button_frame, orient="horizontal", mode="determinate")
+        self.progress_bar.grid(row=1, column=0, columnspan=3, pady=(10,0), sticky="ew")
 
         self.row += 1
 
@@ -402,6 +411,18 @@ Happy uploading!
 
         yt_keywords_entry = tk.Entry(self.general_frame, textvariable=self.yt_keywords_var)
         yt_keywords_entry.grid(row=frame.row, column=1, sticky="ew")
+
+        # YouTube Video Privacy status
+        frame.new_row()
+        privacy_status_label = tk.Label(self.general_frame, text="Privacy Status:")
+        privacy_status_label.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(privacy_status_label, "Sets the privacy status for all the uploaded videos.")
+
+        # Privacy Status OptionMenu with Tooltip
+        privacy_status_option_menu = tk.OptionMenu(self.general_frame, self.privacy_status_var, *[e.value for e in VideoPrivacyStatus])
+        privacy_status_option_menu.grid(row=frame.row, column=1, sticky="ew")
+        Tooltip(privacy_status_option_menu, "Choose between Public, Private, or Unlisted video privacy status.")
+
 
     def add_youtube_title_widgets(self):
         frame = self.youtube_title_frame
@@ -568,6 +589,10 @@ Happy uploading!
         self.logger.info("Stopping current operation")
         self.stop_event.set()
 
+    def update_progress(self, progress):
+        self.logger.info(f"Progress is: {progress}")
+        self.progress_bar['value'] = progress*100
+
     def run_upload(self):
         self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
 
@@ -585,6 +610,7 @@ Happy uploading!
         thumb_file_prefix = self.thumb_file_prefix_var.get()
         thumb_file_suffix = self.thumb_file_suffix_var.get()
         thumb_file_extensions = self.thumb_file_extensions_var.get().split()
+        privacy_status = self.privacy_status_var.get()
 
         # Extract replacement patterns
         youtube_description_replacements = self.youtube_desc_frame.get_replacements()
@@ -608,9 +634,11 @@ Happy uploading!
             thumbnail_filename_prefix=thumb_file_prefix,
             thumbnail_filename_suffix=thumb_file_suffix,
             thumbnail_filename_extensions=thumb_file_extensions,
+            privacy_status=privacy_status,
             youtube_description_replacements=youtube_description_replacements,
             youtube_title_replacements=youtube_title_replacements,
             thumbnail_filename_replacements=thumbnail_filename_replacements,
+            progress_callback_func=self.update_progress,
         )
 
         self.logger.info("Beginning YouTubeBulkUpload process thread...")

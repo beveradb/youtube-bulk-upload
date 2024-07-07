@@ -9,9 +9,15 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload
+from enum import Enum
 
 YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v="
 
+
+class VideoPrivacyStatus(Enum): 
+    PUBLIC = "public"
+    PRIVATE = "private"
+    UNLISTED = "unlisted"
 
 class YouTubeBulkUpload:
     def __init__(
@@ -38,6 +44,8 @@ class YouTubeBulkUpload:
         thumbnail_filename_suffix=None,
         thumbnail_filename_replacements=None,
         thumbnail_filename_extensions=[".png", ".jpg", ".jpeg"],
+        privacy_status=VideoPrivacyStatus.PRIVATE,
+        progress_callback_func=None,
     ):
         self.logger = logger
 
@@ -92,8 +100,12 @@ class YouTubeBulkUpload:
         self.thumbnail_filename_replacements = thumbnail_filename_replacements
         self.thumbnail_filename_extensions = thumbnail_filename_extensions
 
+        self.privacy_status = privacy_status
+
         self.interactive_prompt = interactive_prompt
         self.upload_batch_limit = upload_batch_limit
+
+        self.progress_callback_func = progress_callback_func
 
     def find_input_files(self):
         self.logger.info(f"Finding input video files to upload...")
@@ -177,6 +189,9 @@ class YouTubeBulkUpload:
                 self.logger.info(f"YouTube client secrets file is valid JSON: {self.youtube_client_secrets_file}")
         except json.JSONDecodeError as e:
             raise Exception(f"YouTube client secrets file is not valid JSON: {self.youtube_client_secrets_file}") from e
+        
+        if self.privacy_status not in VideoPrivacyStatus:
+            raise Exception(f"\"{self.privacy_status}\" is not a valid video privacy value. It must be private, public or unlisted") 
 
         self.logger.debug(f"YouTube upload checks passed")
 
@@ -264,7 +279,7 @@ class YouTubeBulkUpload:
         self.logger.info(f"Uploading video {video_file} to YouTube with title, description and thumbnail...")
         if self.dry_run:
             self.logger.info(
-                f"DRY RUN: Would upload {video_file} to YouTube with title: {youtube_title}, description: {youtube_description[:50]}... and thumbnail: {thumbnail_filepath}"
+                f"DRY RUN: Would upload {video_file} to YouTube with title: {youtube_title}, description: {youtube_description[:50]}... and thumbnail: {thumbnail_filepath} with Privacy Status: {self.privacy_status}"
             )
             return "dry-run-video-id"
         else:
@@ -278,16 +293,22 @@ class YouTubeBulkUpload:
                     "tags": self.youtube_keywords,
                     "categoryId": self.youtube_category_id,
                 },
-                "status": {"privacyStatus": "public"},
+                "status": {"privacyStatus": self.privacy_status},
             }
 
             # Use MediaFileUpload to handle the video file
-            media_file = MediaFileUpload(video_file, resumable=True)
+            media_file = MediaFileUpload(video_file, resumable=True, chunksize=10485760)
 
             # Call the API's videos.insert method to create and upload the video.
             self.logger.info(f"Uploading video to YouTube...")
             request = youtube.videos().insert(part="snippet,status", body=body, media_body=media_file)
-            response = request.execute()
+
+            # Use chunked upload to get upload status
+            response = None
+            while response is None:
+                status, response = request.next_chunk()
+                if status and self.progress_callback_func:
+                    self.progress_callback_func(progress=status.progress())
 
             youtube_video_id = response.get("id")
             youtube_url = f"{YOUTUBE_URL_PREFIX}{youtube_video_id}"
@@ -297,6 +318,10 @@ class YouTubeBulkUpload:
                 media_thumbnail = MediaFileUpload(thumbnail_filepath)
                 youtube.thumbnails().set(videoId=youtube_video_id, media_body=media_thumbnail).execute()
                 self.logger.info(f"Uploaded thumbnail for video ID {youtube_video_id}")
+
+            # Reset progress to 0 for next video
+            if self.progress_callback_func:
+                self.progress_callback_func(0)
 
             return youtube_video_id
 
@@ -440,6 +465,7 @@ class YouTubeBulkUpload:
                         f"Title: {youtube_title}?\n\n"
                         f"Thumbnail filepath: {thumbnail_filepath}\n\n"
                         f"Description: {youtube_description}\n\n"
+                        f"Privacy Status: {self.privacy_status}\n\n"
                         "Proceed with upload? (y/n): "
                     )
                     if self.prompt_user_bool(confirmation_prompt):

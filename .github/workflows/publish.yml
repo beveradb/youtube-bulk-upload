@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         settings:
-          - platform: "macos-latest"
+          - platform: "macos-13"
             args: "--target x86_64-apple-darwin"
           - platform: "macos-14"
             args: "--target aarch64-apple-darwin"

@@ -88,7 +88,7 @@ class YouTubeBulkUploaderGUI:
 
 This tool helps you upload videos to YouTube in bulk with custom metadata derived from the video file names.
 
-To use it, you'll need a YouTube Data API Client Secret (JSON file) - reach out to Andrew if you aren't sure where to get this!
+To use it, you'll need a YouTube Data API Client Secret (JSON file) - see the README for instructions on getting this!
 
 Once you have that, you can point this tool at a directory of video files and it will upload them to YouTube, generating titles based on the filename, setting descriptions based on a template file, and optionally using a dedicated thumbnail image for each video in the same directory.
 

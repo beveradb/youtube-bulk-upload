@@ -39,15 +39,32 @@ Once it loads, it should look something like this:
 
 ![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.3.4-Windows-GUI-Example.png)
 
+## Creating a Client Secret for the YouTube Data API 
+
+To use this tool, you'll need an OAuth 2.0 Client Secret (JSON file) with scopes enabled for the YouTube Data API.
+This authenticates the app with Google's servers and allows you to interact with your own channel via the YouTube API.
+
+YouTube provide [these instructions](https://developers.google.com/youtube/registering_an_application) for how to do this, but those instructions aren't very detailed.
+
+Here are some more detailed instructions:
+- Log into the Google Cloud Console with your own Google Account: https://console.cloud.google.com
+- Create a Google Cloud project, if you don't already have one: https://console.cloud.google.com/projectcreate
+- Enable the YouTube Data API: https://console.cloud.google.com/apis/library/youtube.googleapis.com
+- Configure the OAuth Consent Screen (this is to allow your app's users - so basically just you - to consent to the app accessing their account)
+- Enable the "Manage YouTube Account" scope for this OAuth app 
+- Create Credentials for your OAuth app, and download the JSON file for these credentials
+
+Here's a screencast video demonstration of me doing these steps:
+<link to be added shortly>
+
+
 ## Usage (GUI))
 
 👀 [Watch this tutorial video](https://youtu.be/9WklrdupZhg) for a better explanation and demonstration of how to use this tool.
 
 YouTube Bulk Upload helps you upload videos to YouTube in bulk from a single folder, with custom metadata derived from the video file names.
 
-To use it, you'll need a YouTube Data API Client Secret (JSON file) - reach out to Andrew if you aren't sure where to get this!
-
-Once you have that, you can point this tool at a directory of video files and it will upload them to YouTube, generating titles based on the filename, setting descriptions based on a template file, and optionally using a dedicated thumbnail image for each video in the same directory.
+Once you have a YouTube API client secret, you can point this tool at a directory of video files and it will upload them to YouTube, generating titles based on the filename, setting descriptions based on a template file, and optionally using a dedicated thumbnail image for each video in the same directory.
 
 I highly recommend testing it out with "Dry Run" enabled first, in which mode it will log exactly what it is doing but won't actually upload anything.
 
@@ -114,5 +131,6 @@ YouTube Bulk Upload is released under the MIT License. See the LICENSE file for 
 Contributions are welcome! Please feel free to submit pull requests or open issues on the GitHub repository.
 
 ## Acknowledgments
-This project is maintained by Andrew Beveridge. Special thanks to all contributors and users for their support and feedback.
+This project is maintained by Andrew Beveridge <andrew@beveridge.uk>.
+Special thanks to all contributors and users for their support and feedback.
 

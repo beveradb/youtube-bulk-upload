@@ -65,10 +65,10 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APPNAMEWITHDETAILS }}
+          name: ${{ env.APPNAMEWITHDETAILS }}-${{ matrix.settings.platform }}
           path: |
-            dist/${{ env.APPNAMEWITHDETAILS }}.exe
-            dist/${{ env.APPNAMEWITHDETAILS }}.dmg
+            ${{ startsWith(matrix.settings.platform, 'windows') && format('dist/{0}.exe', env.APPNAMEWITHDETAILS) || '' }}
+            ${{ startsWith(matrix.settings.platform, 'macos') && format('dist/{0}.dmg', env.APPNAMEWITHDETAILS) || '' }}
 
   # Auto-publish when version is increased
   publish-pypi:

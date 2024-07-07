@@ -46,26 +46,28 @@ This authenticates the app with Google's servers and allows you to interact with
 
 YouTube provide [these instructions](https://developers.google.com/youtube/registering_an_application) for how to do this, but those instructions aren't very detailed.
 
-Here are some more detailed instructions:
+### Video Demonstration
 
-1) Log into the [Google Cloud Console](https://console.cloud.google.com) with your own Google Account
+Here's a screencast video demonstration of the instructions below:
+[![Video Demo: Creating a Client Secret](https://img.youtube.com/vi/3Sor3kw3LX8/0.jpg)](https://www.youtube.com/watch?v=3Sor3kw3LX8)
 
-2) Create a [Google Cloud project](https://console.cloud.google.com/projectcreate), if you don't already have one
+### Step-by-step Instructions
 
-3) Enable the [YouTube Data API](https://console.cloud.google.com/apis/library/youtube.googleapis.com) <img src="images/GCPEnableYouTubeDataAPI.png" alt="Enabling API client credential scopes" height="300">
+1) Log into the [Google Cloud Console](https://console.cloud.google.com) with your own Google Account. If you've never used GCP before, you'll probably need to click accept or something to enable it.
 
-4) Configure the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent/edit) with minimal details for "your app", name (e.g. "My YouTube Bulk Uploader") and your email address <img src="images/GCPOAuthConsentScreenBasics.png" alt="GCP OAuth Consent Screen Basic Configuration" height="300">
+2) Create a [Google Cloud project](https://console.cloud.google.com/projectcreate), if you don't already have one.
 
-5) On the Scopes tab, click `Add or Remove Scopes`, select the "Manage your YouTube account" scope (`.../auth/youtube`) and click Update <img src="images/GCPOAuthScopesYouTubeData.png" alt="GCP OAuth Consent Screen Scopes" height="300">
+3) Enable the [YouTube Data API](https://console.cloud.google.com/apis/library/youtube.googleapis.com). <img src="images/GCPEnableYouTubeDataAPI.png" alt="Enabling API client credential scopes" height="300">
+
+4) Configure the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent/edit) with minimal details for "your app" such as name (e.g. "My YouTube Bulk Uploader") and your email address for both the "user support" and "developer contact", then click `Save and Continue`. <img src="images/GCPOAuthConsentScreenBasics.png" alt="GCP OAuth Consent Screen Basic Configuration" height="300">
+
+5) On the Scopes tab, click `Add or Remove Scopes`, select the "Manage your YouTube account" scope (`.../auth/youtube`) and click Update, then `Save and Continue`. <img src="images/GCPOAuthScopesYouTubeData.png" alt="GCP OAuth Consent Screen Scopes" height="300">
 
 6) On the `Test users`, add your own google account email address as a test user, then click `Save and Continue`. On the final confirmation screen, just click `Back to Dashboard`. <img src="images/GCPOAuthConsentScreenTestUsers.png" alt="GCP OAuth Consent Screen Test Users" height="300">
 
 7) From the [API Credentials](https://console.cloud.google.com/apis/credentials) page, click `Create Credentials` then `OAuth client ID`. Set the application type to `Desktop app` and give it a name, e.g. `My YouTube Bulk Uploader` <img src="images/GCPCreateOAuthClientID.png" alt="Creating OAuth client ID" height="300">
 
 8) Once you see the `OAuth client created` screen, click `Download JSON` - this is the file you should specify in the "Client Secret File" setting in the YouTube Bulk Upload GUI/CLI. <img src="images/GCPOAuthClientCreated.png" alt="Downloading OAuth client secret credentials JSON" height="300">
-
-Here's a screencast video demonstration of me doing these steps:
-<link to be added shortly>
 
 
 ## Usage (GUI))

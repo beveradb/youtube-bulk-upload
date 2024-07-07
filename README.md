@@ -49,7 +49,8 @@ YouTube provide [these instructions](https://developers.google.com/youtube/regis
 ### Video Demonstration
 
 Here's a screencast video demonstration of the instructions below:
-[![Video Demo: Creating a Client Secret](https://img.youtube.com/vi/3Sor3kw3LX8/0.jpg)](https://www.youtube.com/watch?v=3Sor3kw3LX8)
+
+[![Video Demo: Creating a Client Secret](images/ClientSecretInstructionsVideoThumbnail.jpg)](https://www.youtube.com/watch?v=3Sor3kw3LX8)
 
 ### Step-by-step Instructions
 

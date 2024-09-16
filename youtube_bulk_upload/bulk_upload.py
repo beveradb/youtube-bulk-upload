@@ -14,10 +14,11 @@ from enum import Enum
 YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v="
 
 
-class VideoPrivacyStatus(Enum): 
+class VideoPrivacyStatus(Enum):
     PUBLIC = "public"
     PRIVATE = "private"
     UNLISTED = "unlisted"
+
 
 class YouTubeBulkUpload:
     def __init__(
@@ -189,9 +190,9 @@ class YouTubeBulkUpload:
                 self.logger.info(f"YouTube client secrets file is valid JSON: {self.youtube_client_secrets_file}")
         except json.JSONDecodeError as e:
             raise Exception(f"YouTube client secrets file is not valid JSON: {self.youtube_client_secrets_file}") from e
-        
-        if self.privacy_status not in VideoPrivacyStatus:
-            raise Exception(f"\"{self.privacy_status}\" is not a valid video privacy value. It must be private, public or unlisted") 
+
+        if self.privacy_status not in [status.value for status in VideoPrivacyStatus]:
+            raise Exception(f'"{self.privacy_status}" is not a valid video privacy value. It must be private, public or unlisted')
 
         self.logger.debug(f"YouTube upload checks passed")
 

@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 from youtube_bulk_upload import YouTubeBulkUpload
 from youtube_bulk_upload import VideoPrivacyStatus
 
+
 class YouTubeBulkUploaderGUI:
     def __init__(self, gui_root: tk.Tk, logger: logging.Logger, bundle_dir: Path, running_in_pyinstaller: bool):
         self.logger = logger
@@ -35,7 +36,8 @@ class YouTubeBulkUploaderGUI:
 
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
         self.upload_batch_limit_var = tk.IntVar(value=100)
-        self.input_file_extensions_var = tk.StringVar(value=".mp4 .mov")
+
+        self.input_file_extensions_var = tk.StringVar(value=".mp4 .mov .avi .mkv .mpg .mpeg .wmv .flv .webm .m4v .vob")
         self.yt_category_id_var = tk.StringVar(value="10")
         self.yt_keywords_var = tk.StringVar(value="music")
         self.yt_desc_template_file_var = tk.StringVar()
@@ -112,9 +114,7 @@ Happy uploading!
         button_frame = tk.Frame(welcome_window)
         button_frame.pack(pady=10)
 
-        video_button = tk.Button(
-            button_frame, text="Watch Tutorial", command=lambda: self.open_link("https://youtu.be/9WklrdupZhg")
-        )
+        video_button = tk.Button(button_frame, text="Watch Tutorial", command=lambda: self.open_link("https://youtu.be/9WklrdupZhg"))
         video_button.pack(side=tk.LEFT, padx=5)
 
         close_button = tk.Button(button_frame, text="Close", command=welcome_window.destroy)
@@ -151,7 +151,7 @@ Happy uploading!
                 self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
                 self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))
                 self.upload_batch_limit_var.set(config.get("upload_batch_limit", 100))
-                self.input_file_extensions_var.set(config.get("input_file_extensions", ".mp4 .mov"))
+                self.input_file_extensions_var.set(config.get("input_file_extensions", ".mp4 .mov .avi .mkv .mpg .mpeg .wmv .flv .webm .m4v .vob"))
                 self.yt_category_id_var.set(config.get("yt_category_id", "10"))
                 self.yt_keywords_var.set(config.get("yt_keywords", "music"))
                 self.yt_desc_template_file_var.set(config.get("yt_desc_template_file", ""))
@@ -295,7 +295,7 @@ Happy uploading!
 
         # Progress bar spanning all three buttons
         self.progress_bar = ttk.Progressbar(button_frame, orient="horizontal", mode="determinate")
-        self.progress_bar.grid(row=1, column=0, columnspan=3, pady=(10,0), sticky="ew")
+        self.progress_bar.grid(row=1, column=0, columnspan=3, pady=(10, 0), sticky="ew")
 
         self.row += 1
 
@@ -422,7 +422,6 @@ Happy uploading!
         privacy_status_option_menu = tk.OptionMenu(self.general_frame, self.privacy_status_var, *[e.value for e in VideoPrivacyStatus])
         privacy_status_option_menu.grid(row=frame.row, column=1, sticky="ew")
         Tooltip(privacy_status_option_menu, "Choose between Public, Private, or Unlisted video privacy status.")
-
 
     def add_youtube_title_widgets(self):
         frame = self.youtube_title_frame
@@ -591,7 +590,7 @@ Happy uploading!
 
     def update_progress(self, progress):
         self.logger.info(f"Progress is: {progress}")
-        self.progress_bar['value'] = progress*100
+        self.progress_bar["value"] = progress * 100
 
     def run_upload(self):
         self.logger.info("Initializing YouTubeBulkUpload class with parameters from GUI")
@@ -617,6 +616,9 @@ Happy uploading!
         youtube_title_replacements = self.youtube_title_frame.get_replacements()
         thumbnail_filename_replacements = self.thumbnail_frame.get_replacements()
 
+        # Split the file extensions string into a list
+        input_file_extensions = self.input_file_extensions_var.get().split()
+
         # Initialize YouTubeBulkUpload with collected parameters and replacements
         self.youtube_bulk_upload = YouTubeBulkUpload(
             logger=self.logger,
@@ -625,6 +627,7 @@ Happy uploading!
             stop_event=self.stop_event,
             gui=self,
             source_directory=source_directory,
+            input_file_extensions=input_file_extensions,
             youtube_client_secrets_file=yt_client_secrets_file,
             youtube_category_id=yt_category_id,
             youtube_keywords=yt_keywords,

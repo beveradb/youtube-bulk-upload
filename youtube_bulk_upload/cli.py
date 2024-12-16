@@ -36,7 +36,7 @@ def main():
     general_group.add_argument("--log_level", default="info", help=log_level_help)
     general_group.add_argument("--dry_run", "-n", action="store_true", help=dry_run_help)
     general_group.add_argument("--source_directory", default=os.getcwd(), help=source_directory_help)
-    general_group.add_argument("--input_file_extensions", nargs="+", default=[".mp4", ".mov"], help=input_file_extensions_help)
+    general_group.add_argument("--input_file_extensions", nargs="+", default=[".mp4", ".mov", ".avi", ".mkv", ".mpg", ".mpeg", ".wmv", ".flv", ".webm", ".m4v", ".vob"], help=input_file_extensions_help)
     general_group.add_argument("--noninteractive", default=False, action="store_true", help=noninteractive_help)
     general_group.add_argument("--upload_batch_limit", type=int, default=100, help=upload_batch_limit_help)
 

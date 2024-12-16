@@ -1,6 +1,14 @@
 # Test files
 *.mp4
 *.mov
+*.avi
+*.mkv
+*.mpg
+*.mpeg
+*.wmv
+*.flv
+*.webm
+*.m4v
 *client_secret.json
 *description_template.txt
 youtube_bulk_upload_config.json

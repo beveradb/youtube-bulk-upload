@@ -31,7 +31,7 @@ class YouTubeBulkUpload:
         stop_event=None,
         gui=None,
         source_directory=os.getcwd(),
-        input_file_extensions=[".mp4", ".mov"],
+        input_file_extensions=[".mp4", ".mov", ".avi", ".mkv", ".mpg", ".mpeg", ".wmv", ".flv", ".webm", ".m4v", ".vob"],
         upload_batch_limit=100,
         youtube_client_secrets_file=None,
         youtube_category_id="10",  # Category ID for Music

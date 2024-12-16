@@ -46,6 +46,7 @@ class YouTubeBulkUpload:
         thumbnail_filename_replacements=None,
         thumbnail_filename_extensions=[".png", ".jpg", ".jpeg"],
         privacy_status=VideoPrivacyStatus.PRIVATE,
+        check_for_duplicate_titles=True,
         progress_callback_func=None,
     ):
         self.logger = logger
@@ -105,6 +106,8 @@ class YouTubeBulkUpload:
 
         self.interactive_prompt = interactive_prompt
         self.upload_batch_limit = upload_batch_limit
+
+        self.check_for_duplicate_titles = check_for_duplicate_titles
 
         self.progress_callback_func = progress_callback_func
 
@@ -452,11 +455,12 @@ class YouTubeBulkUpload:
                 youtube_description = self.determine_youtube_description(video_file, youtube_title)
                 thumbnail_filepath = self.determine_thumbnail_filepath(video_file)
 
-                existing_video_matching_title_id = self.check_if_video_title_exists_on_youtube_channel(youtube_title)
-                if existing_video_matching_title_id is not None:
-                    existing_video_matching_title_url = f"{YOUTUBE_URL_PREFIX}{existing_video_matching_title_id}"
-                    self.logger.warning(f"Video already exists on YouTube, skipping upload: {existing_video_matching_title_url}")
-                    continue
+                if self.check_for_duplicate_titles:
+                    existing_video_matching_title_id = self.check_if_video_title_exists_on_youtube_channel(youtube_title)
+                    if existing_video_matching_title_id is not None:
+                        existing_video_matching_title_url = f"{YOUTUBE_URL_PREFIX}{existing_video_matching_title_id}"
+                        self.logger.warning(f"Video already exists on YouTube, skipping upload: {existing_video_matching_title_url}")
+                        continue
 
                 if self.interactive_prompt:
                     self.logger.info("Interactive prompt is enabled. Confirming upload details with user.")

@@ -48,6 +48,7 @@ class YouTubeBulkUploaderGUI:
         self.thumb_file_extensions_var = tk.StringVar(value=".png .jpg .jpeg")
         self.privacy_status_var = tk.StringVar(value=VideoPrivacyStatus.PRIVATE.value)
         self.dont_show_welcome_message_var = tk.BooleanVar(value=False)
+        self.check_duplicate_titles_var = tk.BooleanVar(value=True)
 
         # Fire off our clean shutdown function when the user requests to close the window
         gui_root.wm_protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -151,7 +152,9 @@ Happy uploading!
                 self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
                 self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))
                 self.upload_batch_limit_var.set(config.get("upload_batch_limit", 100))
-                self.input_file_extensions_var.set(config.get("input_file_extensions", ".mp4 .mov .avi .mkv .mpg .mpeg .wmv .flv .webm .m4v .vob"))
+                self.input_file_extensions_var.set(
+                    config.get("input_file_extensions", ".mp4 .mov .avi .mkv .mpg .mpeg .wmv .flv .webm .m4v .vob")
+                )
                 self.yt_category_id_var.set(config.get("yt_category_id", "10"))
                 self.yt_keywords_var.set(config.get("yt_keywords", "music"))
                 self.yt_desc_template_file_var.set(config.get("yt_desc_template_file", ""))
@@ -162,6 +165,7 @@ Happy uploading!
                 self.thumb_file_extensions_var.set(config.get("thumb_file_extensions", ".png .jpg .jpeg"))
                 self.privacy_status_var.set(config.get("privacy_status", VideoPrivacyStatus.PUBLIC.value))
                 self.dont_show_welcome_message_var = tk.BooleanVar(value=config.get("dont_show_welcome_message", False))
+                self.check_duplicate_titles_var.set(config.get("check_duplicate_titles", True))
 
                 # Load replacement patterns
                 youtube_description_replacements = config.get("youtube_description_replacements", [])
@@ -208,6 +212,7 @@ Happy uploading!
             "youtube_title_replacements": youtube_title_replacements,
             "thumbnail_filename_replacements": thumbnail_filename_replacements,
             "dont_show_welcome_message": self.dont_show_welcome_message_var.get(),
+            "check_duplicate_titles": self.check_duplicate_titles_var.get(),
         }
         with open(self.gui_config_filepath, "w") as f:
             json.dump(config, f, indent=4)
@@ -422,6 +427,16 @@ Happy uploading!
         privacy_status_option_menu = tk.OptionMenu(self.general_frame, self.privacy_status_var, *[e.value for e in VideoPrivacyStatus])
         privacy_status_option_menu.grid(row=frame.row, column=1, sticky="ew")
         Tooltip(privacy_status_option_menu, "Choose between Public, Private, or Unlisted video privacy status.")
+
+        frame.new_row()
+        check_duplicate_titles_checkbutton = tk.Checkbutton(
+            self.general_frame, text="Check for Duplicate Titles", variable=self.check_duplicate_titles_var
+        )
+        check_duplicate_titles_checkbutton.grid(row=frame.row, column=0, sticky="w")
+        Tooltip(
+            check_duplicate_titles_checkbutton,
+            "When enabled, checks for similar titles on your channel before uploading to prevent duplicates. Disable if you regularly upload videos with similar titles.",
+        )
 
     def add_youtube_title_widgets(self):
         frame = self.youtube_title_frame

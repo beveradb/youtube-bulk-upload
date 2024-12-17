@@ -276,10 +276,11 @@ Happy uploading!
         button_frame = tk.Frame(self.gui_root)
         button_frame.grid(row=self.row, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
 
-        # Configure the frame's grid to have three columns with equal weight
+        # Configure the frame's grid to have four columns with equal weight (added one more)
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
         button_frame.grid_columnconfigure(2, weight=1)
+        button_frame.grid_columnconfigure(3, weight=1)
 
         # Place the buttons inside the frame, each in its own column
         self.run_button = tk.Button(button_frame, text="Run", command=self.run_upload)
@@ -295,6 +296,10 @@ Happy uploading!
         self.clear_log_button = tk.Button(button_frame, text="Clear Log", command=self.clear_log)
         self.clear_log_button.grid(row=0, column=2, sticky="ew")
         Tooltip(self.clear_log_button, "Clears the log output below.")
+
+        self.reset_auth_button = tk.Button(button_frame, text="Reset YouTube Auth", command=self.reset_youtube_auth)
+        self.reset_auth_button.grid(row=0, column=3, sticky="ew")
+        Tooltip(self.reset_auth_button, "Deletes saved YouTube authentication. Use this if you want to switch YouTube accounts.")
 
         self.row += 1
 
@@ -656,6 +661,7 @@ Happy uploading!
             youtube_description_replacements=youtube_description_replacements,
             youtube_title_replacements=youtube_title_replacements,
             thumbnail_filename_replacements=thumbnail_filename_replacements,
+            check_for_duplicate_titles=self.check_duplicate_titles_var.get(),
             progress_callback_func=self.update_progress,
         )
 
@@ -717,6 +723,26 @@ Happy uploading!
         self.log_output.config(state=tk.NORMAL)  # Enable text widget for editing
         self.log_output.delete("1.0", tk.END)
         self.log_output.config(state=tk.DISABLED)  # Disable text widget after clearing
+
+    def reset_youtube_auth(self):
+        """Delete the YouTube authentication token file."""
+        self.logger.info("Resetting YouTube authentication...")
+        try:
+            import tempfile
+            import os
+
+            pickle_file = os.path.join(tempfile.gettempdir(), "youtube-bulk-upload-token.pickle")
+            if os.path.exists(pickle_file):
+                os.remove(pickle_file)
+                self.logger.info("YouTube authentication token deleted successfully")
+                messagebox.showinfo("Success", "YouTube authentication has been reset. You will need to re-authenticate on next upload.")
+            else:
+                self.logger.info("No YouTube authentication token found")
+                messagebox.showinfo("Info", "No YouTube authentication token found.")
+        except Exception as e:
+            error_msg = f"Failed to reset YouTube authentication: {str(e)}"
+            self.logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
 
 
 class ReusableWidgetFrame(tk.LabelFrame):

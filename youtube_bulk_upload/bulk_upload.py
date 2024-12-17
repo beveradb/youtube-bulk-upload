@@ -68,6 +68,7 @@ class YouTubeBulkUpload:
         self.logger.info(
             f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
         )
+        self.logger.info(f"check_for_duplicate_titles: {check_for_duplicate_titles}")
         self.logger.info(
             f"youtube_client_secrets_file: {youtube_client_secrets_file}, youtube_description_template_file: {youtube_description_template_file}"
         )

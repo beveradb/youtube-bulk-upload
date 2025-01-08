@@ -4,14 +4,20 @@ import tempfile
 import logging
 import re
 import pickle
+from typing import Any, Iterable
 from thefuzz import fuzz
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload
+from google.auth.exceptions import RefreshError
+from google.auth.external_account_authorized_user import Credentials as Creds
+from google.oauth2.credentials import Credentials
 from enum import Enum
 
-YOUTUBE_URL_PREFIX = "https://www.youtube.com/watch?v="
+YOUTUBE_URL_PREFIX: str = "https://www.youtube.com/watch?v="
+DEFAULT_LOG_LEVEL: int = logging.DEBUG
+DEFAULT_LOGGING_FORMATTER: logging.Formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
 
 
 class VideoPrivacyStatus(Enum):
@@ -23,47 +29,59 @@ class VideoPrivacyStatus(Enum):
 class YouTubeBulkUpload:
     def __init__(
         self,
-        logger=None,
-        log_level=logging.DEBUG,
-        log_formatter=None,
-        dry_run=False,
-        interactive_prompt=True,
-        stop_event=None,
-        gui=None,
-        source_directory=os.getcwd(),
-        input_file_extensions=[".mp4", ".mov", ".avi", ".mkv", ".mpg", ".mpeg", ".wmv", ".flv", ".webm", ".m4v", ".vob"],
-        upload_batch_limit=100,
-        youtube_client_secrets_file=None,
-        youtube_category_id="10",  # Category ID for Music
-        youtube_keywords=["music"],
-        youtube_description_template_file=None,
-        youtube_description_replacements=None,
-        youtube_title_prefix=None,
-        youtube_title_suffix=None,
-        youtube_title_replacements=None,
-        thumbnail_filename_prefix=None,
-        thumbnail_filename_suffix=None,
-        thumbnail_filename_replacements=None,
-        thumbnail_filename_extensions=[".png", ".jpg", ".jpeg"],
-        privacy_status=VideoPrivacyStatus.PRIVATE,
-        check_for_duplicate_titles=True,
-        progress_callback_func=None,
-    ):
-        self.logger = logger
-
-        if self.logger is None:
+        youtube_client_secrets_file: str,
+        logger: logging.Logger | None = None,
+        dry_run: bool = False,
+        interactive_prompt: bool = True,
+        stop_event: Any | None = None,
+        gui: Any | None = None,
+        source_directory: str = os.getcwd(),
+        input_file_extensions: Iterable[str] = [
+            ".mp4",
+            ".mov",
+            ".avi",
+            ".mkv",
+            ".mpg",
+            ".mpeg",
+            ".wmv",
+            ".flv",
+            ".webm",
+            ".m4v",
+            ".vob",
+        ],
+        upload_batch_limit: int = 100,
+        youtube_category_id: str = "10",  # Category ID for Music
+        youtube_keywords: Iterable[str] = ["music"],
+        youtube_description_template_file: str | None = None,
+        youtube_description_replacements: str | None = None,
+        youtube_title_prefix: str | None = None,
+        youtube_title_suffix: str | None = None,
+        youtube_title_replacements: Iterable[Iterable[str]] | None = None,
+        thumbnail_filename_prefix: str | None = None,
+        thumbnail_filename_suffix: str | None = None,
+        thumbnail_filename_replacements: Iterable[Iterable[str]] | None = None,
+        thumbnail_filename_extensions: Iterable[str] = [".png", ".jpg", ".jpeg"],
+        privacy_status: str = VideoPrivacyStatus.PRIVATE.value,
+        check_for_duplicate_titles: bool = True,
+        progress_callback_func: Any | None = None,
+    ) -> None:
+        
+        if logger is None:
             self.logger = logging.getLogger(__name__)
-            self.logger.setLevel(log_level)
-            self.log_level = log_level
-            self.log_formatter = log_formatter
+            self.logger.setLevel(DEFAULT_LOG_LEVEL)
+            self.log_formatter = DEFAULT_LOGGING_FORMATTER
+        else:
+            self.logger = logger
 
-            self.log_handler = logging.StreamHandler()
+        if not self.logger.hasHandlers():
+            _log_handler = logging.StreamHandler()
 
-            if self.log_formatter is None:
-                self.log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+            _log_handler.setFormatter(DEFAULT_LOGGING_FORMATTER)
+            self.logger.addHandler(_log_handler)
+        
+        self.validate_secrets_file(self.logger, youtube_client_secrets_file)
 
-            self.log_handler.setFormatter(self.log_formatter)
-            self.logger.addHandler(self.log_handler)
+        self.youtube = self.authenticate_youtube(self.logger, youtube_client_secrets_file)
 
         self.logger.info(
             f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
@@ -85,8 +103,6 @@ class YouTubeBulkUpload:
 
         self.source_directory = source_directory
         self.input_file_extensions = input_file_extensions
-
-        self.youtube_client_secrets_file = youtube_client_secrets_file
 
         self.youtube_category_id = youtube_category_id
         self.youtube_keywords = youtube_keywords
@@ -112,8 +128,8 @@ class YouTubeBulkUpload:
 
         self.progress_callback_func = progress_callback_func
 
-    def find_input_files(self):
-        self.logger.info(f"Finding input video files to upload...")
+    def find_input_files(self) -> list[str]:
+        self.logger.info("Finding input video files to upload...")
 
         video_files = [
             os.path.join(self.source_directory, f)
@@ -121,19 +137,19 @@ class YouTubeBulkUpload:
             if f.endswith(tuple(self.input_file_extensions))
         ]
         if not video_files:
-            self.logger.error(f"No video files found in current directory to upload.")
-            raise Exception(f"No video files found in current directory to upload.")
+            self.logger.error("No video files found in current directory to upload.")
+            raise Exception("No video files found in current directory to upload.")
 
         self.logger.info(f"Found {len(video_files)} video files to upload.")
 
         return video_files
 
-    def prompt_user_confirmation_or_raise_exception(self, prompt_message, exit_message, allow_empty=False):
+    def prompt_user_confirmation_or_raise_exception(self, prompt_message: str, exit_message: str, allow_empty: bool = False) -> None:
         if not self.prompt_user_bool(prompt_message, allow_empty=allow_empty):
             self.logger.error(exit_message)
             raise Exception(exit_message)
 
-    def prompt_user_bool(self, prompt_message, allow_empty=False):
+    def prompt_user_bool(self, prompt_message: str, allow_empty: bool = False) -> bool:
         if self.gui is not None:
             # Trigger the GUI prompt (this will return immediately)
             self.gui.prompt_user_bool(prompt_message=prompt_message, allow_empty=allow_empty)
@@ -154,7 +170,7 @@ class YouTubeBulkUpload:
             response = input(f"{prompt_message} {options_string} ")
             return response.strip().lower() in accept_responses
 
-    def prompt_user_text(self, prompt_message, default_response=""):
+    def prompt_user_text(self, prompt_message: str, default_response: str = "") -> str:
         if self.gui is not None:
             # Trigger the GUI prompt (this will return immediately)
             self.gui.prompt_user_text(prompt_message, default_response)
@@ -163,76 +179,95 @@ class YouTubeBulkUpload:
             self.gui.user_input_event.wait()
 
             # Once the event is set, retrieve the input
-            user_input = self.gui.user_input_result
+            user_input: str = self.gui.user_input_result
             return user_input
 
         else:
             return input(prompt_message)
 
-    def validate_input_parameters(self):
-        self.logger.info(f"Validating input parameters for enabled features...")
+    def validate_input_parameters(self) -> None:
+        self.logger.info("Validating input parameters for enabled features...")
 
         current_directory = os.getcwd()
         self.logger.info(f"Current directory to process: {current_directory}")
 
-        # Enable youtube upload if client secrets file is provided and is valid JSON
-        if self.youtube_client_secrets_file is None or not os.path.isfile(self.youtube_client_secrets_file):
-            raise Exception(f"YouTube client secrets file does not exist: {self.youtube_client_secrets_file}")
-
         if self.youtube_description_template_file is None:
-            self.logger.warn("No YouTube description template file provided. Description will be empty unless entered interactively.")
+            self.logger.warning("No YouTube description template file provided. Description will be empty unless entered interactively.")
         else:
             if not os.path.isfile(self.youtube_description_template_file):
                 raise Exception(f"YouTube description file does not exist: {self.youtube_description_template_file}")
 
             self.logger.info(f"YouTube description template file exists: {self.youtube_description_template_file}")
 
-        # Test parsing the file as JSON to check it's valid
-        try:
-            with open(self.youtube_client_secrets_file, "r", encoding="utf-8") as f:
-                json.load(f)
-                self.logger.info(f"YouTube client secrets file is valid JSON: {self.youtube_client_secrets_file}")
-        except json.JSONDecodeError as e:
-            raise Exception(f"YouTube client secrets file is not valid JSON: {self.youtube_client_secrets_file}") from e
-
         if self.privacy_status not in [status.value for status in VideoPrivacyStatus]:
             raise Exception(f'"{self.privacy_status}" is not a valid video privacy value. It must be private, public or unlisted')
 
-        self.logger.debug(f"YouTube upload checks passed")
+        self.logger.debug("YouTube upload checks passed")
 
-    def authenticate_youtube(self):
-        """Authenticate and return a YouTube service object."""
-        credentials = None
+    @classmethod
+    def validate_secrets_file(cls, logger: logging.Logger, secrets_file: str) -> None:
+        # Enable youtube upload if client secrets file is provided and is valid JSON
+        if secrets_file is None or not os.path.isfile(secrets_file):
+            raise Exception(f"YouTube client secrets file does not exist: {secrets_file}")
+
+        # Test parsing the file as JSON to check it's valid
+        try:
+            with open(secrets_file, "r", encoding="utf-8") as f:
+                json.load(f)
+                logger.info(f"YouTube client secrets file is valid JSON: {secrets_file}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"YouTube client secrets file is not valid JSON: {secrets_file}") from e
+
+    @classmethod
+    def authenticate_youtube(cls, logger: logging.Logger, youtube_client_secrets_file: str):
+        """Authenticate and return a YouTube service object. If the service is started for the first time or 
+        the refresh token is expired or revoked, a browser window will open so the user can authenticate manually.
+        """
+        logger.info("Authenticating with YouTube...")
+
+        credentials: Credentials | Creds | None = None
         pickle_file = os.path.join(tempfile.gettempdir(), "youtube-bulk-upload-token.pickle")
 
         # Token file stores the user's access and refresh tokens.
         if os.path.exists(pickle_file):
-            self.logger.info(f"Existing YouTube auth token file found: {pickle_file}")
+            logger.info(f"Existing YouTube auth token file found: {pickle_file}")
             with open(pickle_file, "rb") as token:
                 credentials = pickle.load(token)
 
         # If there are no valid credentials, let the user log in.
         if not credentials or not credentials.valid:
             if credentials and credentials.expired and credentials.refresh_token:
-                credentials.refresh(Request())
+                try:
+                    credentials.refresh(Request())
+                except RefreshError:
+                    logger.info("Opening a browser for manual authentication with YouTube...")
+                    credentials = cls.open_browser_to_authenticate(youtube_client_secrets_file)
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.youtube_client_secrets_file, scopes=["https://www.googleapis.com/auth/youtube"]
-                )
-                credentials = flow.run_local_server(port=0)  # This will open a browser for authentication
+                logger.info("Opening a browser for manual authentication with YouTube...")
+                credentials = cls.open_browser_to_authenticate(youtube_client_secrets_file)
 
             # Save the credentials for the next run
             with open(pickle_file, "wb") as token:
-                self.logger.info(f"Saving YouTube auth token to file: {pickle_file}")
+                logger.info(f"Saving YouTube auth token to file: {pickle_file}")
                 pickle.dump(credentials, token)
 
         return build("youtube", "v3", credentials=credentials)
 
-    def get_channel_id(self):
-        youtube = self.authenticate_youtube()
-
+    @classmethod
+    def open_browser_to_authenticate(cls, secrets_file: str) -> Credentials | Creds:
+        """Trigger browser-based authentication and return new credentials."""
+        try:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                secrets_file,
+                scopes=["https://www.googleapis.com/auth/youtube"],
+            )
+            return flow.run_local_server(port=0)
+        except Exception as e:
+            raise RuntimeError("Re-authentication failed.") from e
+    
+    def get_channel_id(self) -> str | None:
         # Get the authenticated user's channel
-        request = youtube.channels().list(part="snippet", mine=True)
+        request = self.youtube.channels().list(part="snippet", mine=True)
         response = request.execute()
 
         # Extract the channel ID
@@ -242,12 +277,11 @@ class YouTubeBulkUpload:
         else:
             return None
 
-    def check_if_video_title_exists_on_youtube_channel(self, youtube_title):
-        youtube = self.authenticate_youtube()
+    def check_if_video_title_exists_on_youtube_channel(self, youtube_title: str) -> str | None:
         channel_id = self.get_channel_id()
 
         self.logger.info(f"Searching YouTube channel {channel_id} for title: {youtube_title}")
-        request = youtube.search().list(part="snippet", channelId=channel_id, q=youtube_title, type="video", maxResults=10)
+        request = self.youtube.search().list(part="snippet", channelId=channel_id, q=youtube_title, type="video", maxResults=10)
         response = request.execute()
 
         # Check if any videos were found
@@ -271,7 +305,7 @@ class YouTubeBulkUpload:
         self.logger.info(f"No matching video found with title: {youtube_title}, continuing with upload.")
         return None
 
-    def truncate_to_nearest_word(self, title, max_length):
+    def truncate_to_nearest_word(self, title: str, max_length: int) -> str:
         self.logger.debug(f"Truncating title with length {len(title)} to nearest word with max length: {max_length}")
         if len(title) <= max_length:
             return title
@@ -280,7 +314,7 @@ class YouTubeBulkUpload:
             truncated_title += " ..."
         return truncated_title
 
-    def upload_video_to_youtube_with_title_thumbnail(self, video_file, youtube_title, youtube_description, thumbnail_filepath):
+    def upload_video_to_youtube_with_title_thumbnail(self, video_file: str, youtube_title: str, youtube_description: str, thumbnail_filepath: str | None) -> str:
         self.logger.info(f"Uploading video {video_file} to YouTube with title, description and thumbnail...")
         if self.dry_run:
             self.logger.info(
@@ -288,10 +322,7 @@ class YouTubeBulkUpload:
             )
             return "dry-run-video-id"
         else:
-            self.logger.info(f"Authenticating with YouTube...")
-            youtube = self.authenticate_youtube()
-
-            body = {
+            body: dict[str, dict[str, str|Iterable[str]]] = {
                 "snippet": {
                     "title": youtube_title,
                     "description": youtube_description,
@@ -302,11 +333,11 @@ class YouTubeBulkUpload:
             }
 
             # Use MediaFileUpload to handle the video file
-            media_file = MediaFileUpload(video_file, resumable=True, chunksize=10485760)
+            media_file = MediaFileUpload(video_file, resumable=True, chunksize=5242880)
 
             # Call the API's videos.insert method to create and upload the video.
-            self.logger.info(f"Uploading video to YouTube...")
-            request = youtube.videos().insert(part="snippet,status", body=body, media_body=media_file)
+            self.logger.info("Uploading video to YouTube...")
+            request = self.youtube.videos().insert(part="snippet,status", body=body, media_body=media_file)
 
             # Use chunked upload to get upload status
             response = None
@@ -321,7 +352,7 @@ class YouTubeBulkUpload:
 
             if thumbnail_filepath is not None:
                 media_thumbnail = MediaFileUpload(thumbnail_filepath)
-                youtube.thumbnails().set(videoId=youtube_video_id, media_body=media_thumbnail).execute()
+                self.youtube.thumbnails().set(videoId=youtube_video_id, media_body=media_thumbnail).execute()
                 self.logger.info(f"Uploaded thumbnail for video ID {youtube_video_id}")
 
             # Reset progress to 0 for next video
@@ -330,10 +361,10 @@ class YouTubeBulkUpload:
 
             return youtube_video_id
 
-    def determine_thumbnail_filepath(self, video_file):
+    def determine_thumbnail_filepath(self, video_file: str) -> str | None:
         self.logger.info(f"Determining thumbnail filepath for video file: {video_file}...")
 
-        modified_filename, video_ext = os.path.splitext(video_file)
+        modified_filename, _ = os.path.splitext(video_file)
 
         # Apply thumbnail filename prefix if set
         if self.thumbnail_filename_prefix is not None:
@@ -367,7 +398,7 @@ class YouTubeBulkUpload:
         # If no file is found, return None
         return None
 
-    def determine_youtube_title(self, video_file):
+    def determine_youtube_title(self, video_file: str) -> str:
         self.logger.info(f"Crafting YouTube title for video file: {video_file}...")
 
         video_title, _ = os.path.splitext(video_file)
@@ -400,7 +431,7 @@ class YouTubeBulkUpload:
 
         return video_title
 
-    def determine_youtube_description(self, video_file, youtube_title):
+    def determine_youtube_description(self, video_file: str, youtube_title: str) -> str:
         self.logger.info(f"Determining YouTube description for video file: {video_file}...")
 
         description = ""
@@ -428,7 +459,7 @@ class YouTubeBulkUpload:
 
         return description
 
-    def process(self):
+    def process(self) -> list[dict[str, str]]:
         if self.dry_run:
             self.logger.warning("Dry run enabled. No actions will be performed.")
 
@@ -438,7 +469,7 @@ class YouTubeBulkUpload:
         self.validate_input_parameters()
 
         video_files = self.find_input_files()
-        uploaded_videos = []
+        uploaded_videos: list[dict[str, str]] = []
         for video_file in video_files:
             # Check if stop_event is set before processing each video
             self.logger.debug("Checking stop event before processing videos...")
@@ -494,5 +525,5 @@ class YouTubeBulkUpload:
             except Exception as e:
                 self.logger.error(f"Failed to upload video {video_file} to YouTube: {e}")
 
-        self.logger.debug(f"All videos processed, returning list of uploaded videos")
+        self.logger.debug("All videos processed, returning list of uploaded videos")
         return uploaded_videos

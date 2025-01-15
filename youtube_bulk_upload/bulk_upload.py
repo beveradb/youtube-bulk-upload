@@ -4,7 +4,7 @@ import tempfile
 import logging
 import re
 import pickle
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional, Union
 from thefuzz import fuzz
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -14,6 +14,9 @@ from google.auth.exceptions import RefreshError
 from google.auth.external_account_authorized_user import Credentials as Creds
 from google.oauth2.credentials import Credentials
 from enum import Enum
+
+OPTIONAL_ANY = Optional[Any]
+OPTIONAL_STR = Optional[str]
 
 YOUTUBE_URL_PREFIX: str = "https://www.youtube.com/watch?v="
 DEFAULT_LOG_LEVEL: int = logging.DEBUG
@@ -30,11 +33,11 @@ class YouTubeBulkUpload:
     def __init__(
         self,
         youtube_client_secrets_file: str,
-        logger: logging.Logger | None = None,
+        logger: Optional[logging.Logger] = None,
         dry_run: bool = False,
         interactive_prompt: bool = True,
-        stop_event: Any | None = None,
-        gui: Any | None = None,
+        stop_event: OPTIONAL_ANY = None,
+        gui: OPTIONAL_ANY = None,
         source_directory: str = os.getcwd(),
         input_file_extensions: Iterable[str] = [
             ".mp4",
@@ -52,18 +55,18 @@ class YouTubeBulkUpload:
         upload_batch_limit: int = 100,
         youtube_category_id: str = "10",  # Category ID for Music
         youtube_keywords: Iterable[str] = ["music"],
-        youtube_description_template_file: str | None = None,
-        youtube_description_replacements: str | None = None,
-        youtube_title_prefix: str | None = None,
-        youtube_title_suffix: str | None = None,
-        youtube_title_replacements: Iterable[Iterable[str]] | None = None,
-        thumbnail_filename_prefix: str | None = None,
-        thumbnail_filename_suffix: str | None = None,
-        thumbnail_filename_replacements: Iterable[Iterable[str]] | None = None,
+        youtube_description_template_file: OPTIONAL_STR = None,
+        youtube_description_replacements: Optional[Iterable[Iterable[str]]] = None,
+        youtube_title_prefix: OPTIONAL_STR = None,
+        youtube_title_suffix: OPTIONAL_STR = None,
+        youtube_title_replacements: Optional[Iterable[Iterable[str]]] = None,
+        thumbnail_filename_prefix: OPTIONAL_STR = None,
+        thumbnail_filename_suffix: OPTIONAL_STR = None,
+        thumbnail_filename_replacements: Optional[Iterable[Iterable[str]]] = None,
         thumbnail_filename_extensions: Iterable[str] = [".png", ".jpg", ".jpeg"],
         privacy_status: str = VideoPrivacyStatus.PRIVATE.value,
         check_for_duplicate_titles: bool = True,
-        progress_callback_func: Any | None = None,
+        progress_callback_func: OPTIONAL_ANY = None,
     ) -> None:
         
         if logger is None:
@@ -81,7 +84,7 @@ class YouTubeBulkUpload:
         
         self.validate_secrets_file(self.logger, youtube_client_secrets_file)
 
-        self.youtube = self.authenticate_youtube(self.logger, youtube_client_secrets_file)
+        self.youtube: Any = self.authenticate_youtube(self.logger, youtube_client_secrets_file)
 
         self.logger.info(
             f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
@@ -219,13 +222,13 @@ class YouTubeBulkUpload:
             raise Exception(f"YouTube client secrets file is not valid JSON: {secrets_file}") from e
 
     @classmethod
-    def authenticate_youtube(cls, logger: logging.Logger, youtube_client_secrets_file: str):
+    def authenticate_youtube(cls, logger: logging.Logger, youtube_client_secrets_file: str) -> Any:
         """Authenticate and return a YouTube service object. If the service is started for the first time or 
         the refresh token is expired or revoked, a browser window will open so the user can authenticate manually.
         """
         logger.info("Authenticating with YouTube...")
 
-        credentials: Credentials | Creds | None = None
+        credentials: Optional[Union[Credentials, Creds]] = None
         pickle_file = os.path.join(tempfile.gettempdir(), "youtube-bulk-upload-token.pickle")
 
         # Token file stores the user's access and refresh tokens.
@@ -254,7 +257,7 @@ class YouTubeBulkUpload:
         return build("youtube", "v3", credentials=credentials)
 
     @classmethod
-    def open_browser_to_authenticate(cls, secrets_file: str) -> Credentials | Creds:
+    def open_browser_to_authenticate(cls, secrets_file: str) -> Union[Credentials, Creds]:
         """Trigger browser-based authentication and return new credentials."""
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
@@ -265,7 +268,7 @@ class YouTubeBulkUpload:
         except Exception as e:
             raise RuntimeError("Re-authentication failed.") from e
     
-    def get_channel_id(self) -> str | None:
+    def get_channel_id(self) -> OPTIONAL_STR:
         # Get the authenticated user's channel
         request = self.youtube.channels().list(part="snippet", mine=True)
         response = request.execute()
@@ -277,7 +280,7 @@ class YouTubeBulkUpload:
         else:
             return None
 
-    def check_if_video_title_exists_on_youtube_channel(self, youtube_title: str) -> str | None:
+    def check_if_video_title_exists_on_youtube_channel(self, youtube_title: str) -> OPTIONAL_STR:
         channel_id = self.get_channel_id()
 
         self.logger.info(f"Searching YouTube channel {channel_id} for title: {youtube_title}")
@@ -314,7 +317,7 @@ class YouTubeBulkUpload:
             truncated_title += " ..."
         return truncated_title
 
-    def upload_video_to_youtube_with_title_thumbnail(self, video_file: str, youtube_title: str, youtube_description: str, thumbnail_filepath: str | None) -> str:
+    def upload_video_to_youtube_with_title_thumbnail(self, video_file: str, youtube_title: str, youtube_description: str, thumbnail_filepath: OPTIONAL_STR) -> str:
         self.logger.info(f"Uploading video {video_file} to YouTube with title, description and thumbnail...")
         if self.dry_run:
             self.logger.info(
@@ -322,7 +325,7 @@ class YouTubeBulkUpload:
             )
             return "dry-run-video-id"
         else:
-            body: dict[str, dict[str, str|Iterable[str]]] = {
+            body: dict[str, dict[str, Union[str, Iterable[str]]]] = {
                 "snippet": {
                     "title": youtube_title,
                     "description": youtube_description,
@@ -361,7 +364,7 @@ class YouTubeBulkUpload:
 
             return youtube_video_id
 
-    def determine_thumbnail_filepath(self, video_file: str) -> str | None:
+    def determine_thumbnail_filepath(self, video_file: str) -> OPTIONAL_STR:
         self.logger.info(f"Determining thumbnail filepath for video file: {video_file}...")
 
         modified_filename, _ = os.path.splitext(video_file)

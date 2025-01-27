@@ -66,7 +66,7 @@ def main():
     yt_group.add_argument("--yt_category_id", default="10", help=yt_category_id_help)
     yt_group.add_argument("--yt_keywords", nargs="+", default=["music"], help=yt_keywords_help)
 
-    yt_group.add_argument("--yt_desc_template_file", default="description_template.txt", help=yt_desc_template_file_help)
+    yt_group.add_argument("--yt_desc_template_file", default=None, help=yt_desc_template_file_help)
     yt_group.add_argument("--yt_desc_replacements", nargs="+", action="append", help=yt_desc_replacements_help)
 
     yt_group.add_argument("--yt_title_prefix", default=None, help=yt_title_prefix_help)

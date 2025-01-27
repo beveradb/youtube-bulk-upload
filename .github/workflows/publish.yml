@@ -15,53 +15,6 @@ jobs:
           - platform: "windows-latest"
             args: "--target x86_64-pc-windows-msvc"
     steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install project and dependencies
-        run: pip install .
-
-      - name: Setup env vars with app name, version, architecture and operating system
-        run: python .github/set_github_vars.py
-
-      - name: Build Windows application with PyInstaller
-        if: startsWith(matrix.settings.platform, 'windows')
-        run: |
-          pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.ico --add-data "youtube_bulk_upload/logo.ico:." --name="${{ env.APPNAMEWITHDETAILS }}" youtube_bulk_upload/gui.py
-
-      - name: Build MacOS application with PyInstaller
-        if: startsWith(matrix.settings.platform, 'macos')
-        run: |
-          pyinstaller --noconfirm --onefile --windowed --icon=youtube_bulk_upload/logo.png --add-data "youtube_bulk_upload/logo.png:." --name="${{ env.APPNAMEWITHDETAILS }}" youtube_bulk_upload/gui.py
-
-      # Install create-dmg (Only for macOS)
-      - name: Install create-dmg
-        if: startsWith(matrix.settings.platform, 'macos')
-        run: npm install -g create-dmg
-
-      # Set app version (Only for macOS)
-      - name: Set .app version in CFBundleShortVersionString
-        if: startsWith(matrix.settings.platform, 'macos')
-        run: plutil -replace CFBundleShortVersionString -string ${{ env.APPVERSION }} dist/*.app/Contents/Info.plist
-
-      - name: Create DMG
-        if: startsWith(matrix.settings.platform, 'macos')
-        run: create-dmg "dist/${{ env.APPNAMEWITHDETAILS }}.app" --dmg-title="${{ env.APPNAME }}" dist || true
-
-      - name: Remove duplicate version from DMG filename
-        if: startsWith(matrix.settings.platform, 'macos')
-        run: mv "dist/${{ env.APPNAMEWITHDETAILS }} ${{ env.APPVERSION }}.dmg" "dist/${{ env.APPNAMEWITHDETAILS }}.dmg"
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -70,17 +23,43 @@ jobs:
             ${{ startsWith(matrix.settings.platform, 'windows') && format('dist/{0}.exe', env.APPNAMEWITHDETAILS) || '' }}
             ${{ startsWith(matrix.settings.platform, 'macos') && format('dist/{0}.dmg', env.APPNAMEWITHDETAILS) || '' }}
 
-  # Auto-publish when version is increased
   publish-pypi:
-    # Only publish on `main` branch
+    needs: [build]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions: # Don't forget permissions
+    permissions:
       contents: write
+      id-token: write
 
     steps:
-      - uses: etils-actions/pypi-auto-publish@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts into a single directory
+        run: |
+          mkdir -p flattened_artifacts
+          find artifacts -type f -exec mv -v {} flattened_artifacts/ \;
+
+      - name: Publish to PyPI and create GitHub release
+        uses: etils-actions/pypi-auto-publish@v1
         with:
           pypi-token: ${{ secrets.PYPI_API_TOKEN }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           parse-changelog: false
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(grep 'version =' pyproject.toml | awk -F'"' '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          files: flattened_artifacts/*

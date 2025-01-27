@@ -122,6 +122,9 @@ jobs:
 
       - name: Prepare files for release
         run: |
+          ls -la *
+          ls -la "flattened_artifacts/"
+          echo "Moving files..."
           mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin arm64).dmg" "./macos-arm64.dmg"
           mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin x86_64).dmg" "./macos-x86_64.dmg"
           mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Windows AMD64).exe" "./windows-amd64.exe"

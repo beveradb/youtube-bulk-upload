@@ -124,4 +124,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ steps.version.outputs.version }}"
-          files: ./flattened_artifacts/*
+          files: |
+            ./flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin arm64).dmg
+            ./flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin x86_64).dmg
+            ./flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Windows AMD64).exe

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "youtube-bulk-upload"
-version = "0.5.3"
+version = "0.5.4"
 description = "Upload all videos in a folder to youtube, e.g. to help re-populate an unfairly terminated channel"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"

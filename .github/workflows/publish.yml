@@ -82,31 +82,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Flatten artifacts and debug
-        run: |
-          echo "Current working directory:"
-          pwd
-          mkdir -p flattened_artifacts
-          find artifacts -type f -exec mv -v {} flattened_artifacts/ \;
-          echo "Contents of current directory:"
-          ls -la
-          echo "Contents of flattened_artifacts directory:"
-          ls -la flattened_artifacts/
-
-      - name: Debug before release upload
-        run: |
-          echo "Current working directory before release upload:"
-          pwd
-          echo "Contents of current directory:"
-          ls -la
-          echo "Contents of flattened_artifacts directory:"
-          ls -la flattened_artifacts/
-
       - name: Publish to PyPI and create GitHub release
         uses: etils-actions/pypi-auto-publish@v1
         with:
@@ -120,14 +95,28 @@ jobs:
           VERSION=$(grep 'version =' pyproject.toml | awk -F'"' '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts and debug
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of artifacts directory:"
+          ls -la artifacts/
+
       - name: Prepare files for release
         run: |
-          ls -la *
-          ls -la "flattened_artifacts/"
+          ls -la
+          ls -la "artifacts/"
           echo "Moving files..."
-          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin arm64).dmg" "./macos-arm64.dmg"
-          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin x86_64).dmg" "./macos-x86_64.dmg"
-          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Windows AMD64).exe" "./windows-amd64.exe"
+          mv "artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin arm64).dmg" "./macos-arm64.dmg"
+          mv "artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin x86_64).dmg" "./macos-x86_64.dmg"
+          mv "artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Windows AMD64).exe" "./windows-amd64.exe"
           echo "Files prepared for release:"
           ls -la *.dmg *.exe
 

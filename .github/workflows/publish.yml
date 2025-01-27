@@ -120,11 +120,19 @@ jobs:
           VERSION=$(grep 'version =' pyproject.toml | awk -F'"' '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Prepare files for release
+        run: |
+          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin arm64).dmg" "./macos-arm64.dmg"
+          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Darwin x86_64).dmg" "./macos-x86_64.dmg"
+          mv "flattened_artifacts/YouTube Bulk Upload v${{ steps.version.outputs.version }} (Windows AMD64).exe" "./windows-amd64.exe"
+          echo "Files prepared for release:"
+          ls -la *.dmg *.exe
+
       - name: Upload assets to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ steps.version.outputs.version }}"
           files: |
-            ./flattened_artifacts/YouTube\ Bulk\ Upload\ v${{ steps.version.outputs.version }}\ \(Darwin\ arm64\).dmg
-            ./flattened_artifacts/YouTube\ Bulk\ Upload\ v${{ steps.version.outputs.version }}\ \(Darwin\ x86_64\).dmg
-            ./flattened_artifacts/YouTube\ Bulk\ Upload\ v${{ steps.version.outputs.version }}\ \(Windows\ AMD64\).exe
+            macos-arm64.dmg
+            macos-x86_64.dmg
+            windows-amd64.exe

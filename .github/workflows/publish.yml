@@ -87,10 +87,25 @@ jobs:
         with:
           path: artifacts
 
-      - name: Flatten artifacts into a single directory
+      - name: Flatten artifacts and debug
         run: |
+          echo "Current working directory:"
+          pwd
           mkdir -p flattened_artifacts
           find artifacts -type f -exec mv -v {} flattened_artifacts/ \;
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of flattened_artifacts directory:"
+          ls -la flattened_artifacts/
+
+      - name: Debug before release upload
+        run: |
+          echo "Current working directory before release upload:"
+          pwd
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of flattened_artifacts directory:"
+          ls -la flattened_artifacts/
 
       - name: Publish to PyPI and create GitHub release
         uses: etils-actions/pypi-auto-publish@v1
@@ -109,4 +124,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "v${{ steps.version.outputs.version }}"
-          files: flattened_artifacts/*
+          files: ./flattened_artifacts/*

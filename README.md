@@ -27,6 +27,8 @@ Double-click the `.dmg` file to run the installer. Install the application by dr
 
 <img src="images/YouTubeBulkUpload-v0.3.4-Mac-GUI-Installer.png" alt="YouTube Bulk Upload GUI Example" height="300">
 
+You then need to open a terminal and run `xattr -c /Applications/YouTube\ Bulk\ Upload*` to fix the file permissions.
+
 Then run the application from your Applications folder as normal, it should look something like this:
 
 ![YouTube Bulk Upload GUI Example](images/YouTubeBulkUpload-v0.3.4-Mac-GUI-Example.png)

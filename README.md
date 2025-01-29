@@ -118,26 +118,286 @@ youtube-bulk-upload --help
 
 ## Integrating as a Package
 
-You can also use YouTube Bulk Upload as a package in your own Python code. Here's a basic example of how to use it:
+You can use YouTube Bulk Upload as a package in your own Python code. The `YouTubeBulkUpload` class provides extensive customization options for your upload workflow.
 
-```bash
+### Basic Example
+
+```python
 from youtube_bulk_upload.bulk_upload import YouTubeBulkUpload
 
 uploader = YouTubeBulkUpload(
-    source_directory="/path/to/videos",
     youtube_client_secrets_file="/path/to/client_secret.json",
+    source_directory="/path/to/videos",
     dry_run=True  # Set to False to perform actual uploads
 )
 
 uploaded_videos = uploader.process()
+print(f"Uploaded {len(uploaded_videos)} videos")
 ```
 
-This script initializes the uploader with a source directory and a client secrets file, then starts the upload process in dry run mode.
+### Constructor Parameters
 
-All of the parameters available in the CLI (`youtube-bulk-upload --help`) are available in the `YouTubeBulkUpload` class.
+#### Required Parameters
 
-For details, see the code in `youtube_bulk_upload/bulk_upload.py`.
-For an example, see the CLI usage in `youtube_bulk_upload/cli.py`.
+- `youtube_client_secrets_file: str`
+  - Path to your YouTube API OAuth client secrets JSON file
+  - Example: `"/path/to/client_secret.json"`
+
+#### Optional Parameters
+
+##### Core Settings
+
+- `source_directory: str = os.getcwd()`
+  - Directory containing videos to upload
+  - Default: Current working directory
+  - Example: `"/path/to/videos"`
+
+- `dry_run: bool = False`
+  - When True, simulates actions without uploading
+  - Example: `dry_run=True`
+
+- `interactive_prompt: bool = True`
+  - When True, prompts for confirmation before actions
+  - Example: `interactive_prompt=False`
+
+##### File Selection
+
+- `input_file_extensions: Iterable[str]`
+  - List of video file extensions to process
+  - Default: `[".mp4", ".mov", ".avi", ".mkv", ...]`
+  - Example: `input_file_extensions=[".mp4", ".mov"]`
+
+- `upload_batch_limit: int = 100`
+  - Maximum number of videos to upload in one session
+  - Example: `upload_batch_limit=50`
+
+##### YouTube Metadata
+
+- `youtube_category_id: str = "10"`
+  - YouTube category ID (10 = Music)
+  - Common categories: "10" (Music), "20" (Gaming), "22" (People & Blogs)
+  - Example: `youtube_category_id="22"`
+
+- `youtube_keywords: Iterable[str] = ["music"]`
+  - Keywords/tags for uploaded videos
+  - Example: `youtube_keywords=["gaming", "lets play", "walkthrough"]`
+
+- `privacy_status: str = "private"`
+  - Video privacy setting: "private", "unlisted", or "public"
+  - Example: `privacy_status="unlisted"`
+
+##### Title Customization
+
+- `youtube_title_prefix: Optional[str] = None`
+  - Text to prepend to video titles
+  - Example: `youtube_title_prefix="[Gaming Series] "`
+
+- `youtube_title_suffix: Optional[str] = None`
+  - Text to append to video titles
+  - Example: `youtube_title_suffix=" - Walkthrough"`
+
+- `youtube_title_replacements: Optional[Iterable[Iterable[str]]] = None`
+  - List of [pattern, replacement] pairs for title modification
+  - Each pair is a list containing [regex_pattern, replacement_text]
+  - Common use cases:
+    ```python
+    # Simple text replacement
+    youtube_title_replacements=[
+        [r"_", " "],  # Replace underscores with spaces
+    ]
+
+    # Remove file extension
+    youtube_title_replacements=[
+        [r"\.mp4$", ""],  # Remove .mp4 from end of title
+        [r"\.mov$", ""],  # Remove .mov from end of title
+    ]
+
+    # Remove directory path
+    youtube_title_replacements=[
+        [r"^.*[/\\]", ""],  # Remove any directory path from title
+    ]
+
+    # Multiple replacements
+    youtube_title_replacements=[
+        [r"^.*[/\\]", ""],  # First remove directory path
+        [r"\.mp4$", ""],    # Then remove .mp4 extension
+        [r"_", " "],        # Then replace underscores with spaces
+    ]
+    ```
+
+  - Real-world examples:
+    ```python
+    # Example 1: Converting "C:\Users\a\Desktop\split-uploader\Gyoubu Skip.mp4"
+    # to "Gyoubu Skip"
+    uploader = YouTubeBulkUpload(
+        youtube_client_secrets_file="client_secret.json",
+        youtube_title_replacements=[
+            [r"^.*[/\\]", ""],  # Remove directory path
+            [r"\.mp4$", ""],    # Remove .mp4 extension
+        ]
+    )
+
+    # Example 2: Converting "raw_footage_20240315_boss_fight.mp4"
+    # to "Boss Fight - March 15, 2024"
+    uploader = YouTubeBulkUpload(
+        youtube_client_secrets_file="client_secret.json",
+        youtube_title_replacements=[
+            [r"^raw_footage_", ""],                    # Remove prefix
+            [r"(\d{4})(\d{2})(\d{2})_", r"\3-\2-\1"], # Format date
+            [r"_", " "],                              # Replace underscores
+            [r"\.mp4$", ""],                          # Remove extension
+        ]
+    )
+
+    # Example 3: Converting "episode_01_dark_souls.mp4"
+    # to "[Dark Souls] Episode 1 - Walkthrough"
+    uploader = YouTubeBulkUpload(
+        youtube_client_secrets_file="client_secret.json",
+        youtube_title_prefix="[Dark Souls] ",
+        youtube_title_suffix=" - Walkthrough",
+        youtube_title_replacements=[
+            [r"episode_(\d+)", r"Episode \1"],  # Format episode number
+            [r"_dark_souls", ""],               # Remove game name (added in prefix)
+            [r"_", " "],                        # Replace remaining underscores
+            [r"\.mp4$", ""],                    # Remove extension
+        ]
+    )
+    ```
+
+##### Description Handling
+
+- `youtube_description_template_file: Optional[str] = None`
+  - Path to template file for video descriptions
+  - Example: `youtube_description_template_file="description_template.txt"`
+
+- `youtube_description_replacements: Optional[Iterable[Iterable[str]]] = None`
+  - List of [pattern, replacement] pairs for description modification
+  - Supports `{{youtube_title}}` placeholder
+  - Example:
+    ```python
+    youtube_description_replacements=[
+        ["{{youtube_title}}", "Check out: {{youtube_title}}"],
+        [r"Contact: old@email.com", "Contact: new@email.com"]
+    ]
+    ```
+
+##### Thumbnail Handling
+
+- `thumbnail_filename_prefix: Optional[str] = None`
+  - Text to prepend when searching for thumbnail files
+  - Example: `thumbnail_filename_prefix="thumb_"`
+
+- `thumbnail_filename_suffix: Optional[str] = None`
+  - Text to append when searching for thumbnail files
+  - Example: `thumbnail_filename_suffix="_thumbnail"`
+
+- `thumbnail_filename_replacements: Optional[Iterable[Iterable[str]]] = None`
+  - List of [pattern, replacement] pairs for thumbnail filename matching
+  - Example:
+    ```python
+    thumbnail_filename_replacements=[
+        [r"\.mp4$", ""],  # Remove video extension
+        [r"video_", "thumb_"]  # Match thumbnail naming pattern
+    ]
+    ```
+
+- `thumbnail_filename_extensions: Iterable[str] = [".png", ".jpg", ".jpeg"]`
+  - File extensions to check for thumbnails
+  - Example: `thumbnail_filename_extensions=[".png"]`
+
+##### Advanced Options
+
+- `check_for_duplicate_titles: bool = True`
+  - When True, checks for existing videos with similar titles
+  - Example: `check_for_duplicate_titles=False`
+
+- `logger: Optional[logging.Logger] = None`
+  - Custom logger instance
+  - Example:
+    ```python
+    import logging
+    custom_logger = logging.getLogger("my_logger")
+    uploader = YouTubeBulkUpload(..., logger=custom_logger)
+    ```
+
+- `progress_callback_func: Optional[Callable[[float], None]] = None`
+  - Function to handle upload progress updates
+  - Example:
+    ```python
+    def progress_callback(progress: float):
+        print(f"Upload progress: {progress * 100:.1f}%")
+    uploader = YouTubeBulkUpload(..., progress_callback_func=progress_callback)
+    ```
+
+### Complete Example
+
+Here's a comprehensive example showing many of the available options:
+
+```python
+from youtube_bulk_upload.bulk_upload import YouTubeBulkUpload
+
+uploader = YouTubeBulkUpload(
+    # Required
+    youtube_client_secrets_file="/path/to/client_secret.json",
+    
+    # Core settings
+    source_directory="/path/to/gaming/videos",
+    dry_run=False,
+    interactive_prompt=False,
+    
+    # YouTube metadata
+    youtube_category_id="20",  # Gaming
+    youtube_keywords=["gaming", "lets play", "walkthrough"],
+    privacy_status="unlisted",
+    
+    # Title customization
+    youtube_title_prefix="[Gaming Series] ",
+    youtube_title_suffix=" - Full Walkthrough",
+    youtube_title_replacements=[
+        [r"_", " "],
+        [r"(\d{4})(\d{2})(\d{2})", r"\1-\2-\3"]
+    ],
+    
+    # Description handling
+    youtube_description_template_file="templates/gaming_description.txt",
+    youtube_description_replacements=[
+        ["{{youtube_title}}", "🎮 {{youtube_title}}"],
+        ["CHANNEL_NAME", "My Gaming Channel"]
+    ],
+    
+    # Thumbnail handling
+    thumbnail_filename_prefix="thumb_",
+    thumbnail_filename_extensions=[".png"],
+    
+    # Advanced options
+    check_for_duplicate_titles=True,
+    upload_batch_limit=50
+)
+
+# Start the upload process
+uploaded_videos = uploader.process()
+
+# Process results
+for video in uploaded_videos:
+    print(f"Uploaded: {video['youtube_title']}")
+    print(f"URL: {video['youtube_url']}")
+```
+
+### Return Value
+
+The `process()` method returns a list of dictionaries containing information about each uploaded video:
+
+```python
+[
+    {
+        "input_filename": "video1.mp4",
+        "youtube_title": "My Video Title",
+        "youtube_id": "dQw4w9WgXcQ",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    },
+    # ... more videos ...
+]
+```
 
 ## License
 YouTube Bulk Upload is released under the MIT License. See the LICENSE file for more details.

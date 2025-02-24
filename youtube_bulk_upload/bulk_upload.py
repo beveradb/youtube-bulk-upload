@@ -527,6 +527,9 @@ class YouTubeBulkUpload:
                 )
             except Exception as e:
                 self.logger.error(f"Failed to upload video {video_file} to YouTube: {e}")
+                # Create a text file and write the video_file name inside it
+                with open('failed_uploads.txt', 'a') as file:
+                  file.write(f"{video_file}\n")
 
         self.logger.debug("All videos processed, returning list of uploaded videos")
         return uploaded_videos

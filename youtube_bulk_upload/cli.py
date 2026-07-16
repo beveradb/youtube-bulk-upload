@@ -30,6 +30,9 @@ def main():
     noninteractive_help = (
         "Optional: Disable interactive prompt, will run fully automatically (will pring warning messages if needed). Default: %(default)s"
     )
+    recursive_help = (
+        "Optional: Uses a recursive algorithm over the source directory. This means that the program detects all videos inside any folder in the source directory (as well as in the source directory itself). Default: %(default)s"
+    )
     upload_batch_limit_help = "Optional: Limit for the number of videos to upload in a batch. Default: %(default)s"
 
     general_group.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
@@ -38,6 +41,7 @@ def main():
     general_group.add_argument("--source_directory", default=os.getcwd(), help=source_directory_help)
     general_group.add_argument("--input_file_extensions", nargs="+", default=[".mp4", ".mov", ".avi", ".mkv", ".mpg", ".mpeg", ".wmv", ".flv", ".webm", ".m4v", ".vob"], help=input_file_extensions_help)
     general_group.add_argument("--noninteractive", default=False, action="store_true", help=noninteractive_help)
+    general_group.add_argument("--recursive", default=False, action="store_true", help=recursive_help)
     general_group.add_argument("--upload_batch_limit", type=int, default=100, help=upload_batch_limit_help)
 
     # YouTube Options
@@ -114,6 +118,7 @@ def main():
         thumbnail_filename_suffix=args.thumb_file_suffix,
         thumbnail_filename_replacements=args.thumb_file_replacements,
         thumbnail_filename_extensions=args.thumb_file_extensions,
+        recursive_search=args.recursive
     )
 
     try:

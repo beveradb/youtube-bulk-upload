@@ -32,6 +32,7 @@ class YouTubeBulkUploaderGUI:
 
         self.dry_run_var = tk.BooleanVar(value=True)
         self.noninteractive_var = tk.BooleanVar()
+        self.recursive_search_var = tk.BooleanVar()
         self.source_directory_var = tk.StringVar(value=os.path.expanduser("~"))
 
         self.yt_client_secrets_file_var = tk.StringVar(value="client_secret.json")
@@ -149,6 +150,7 @@ Happy uploading!
                 self.log_level_var.set(config.get("log_level", "info"))
                 self.dry_run_var.set(config.get("dry_run", True))
                 self.noninteractive_var.set(config.get("noninteractive", False))
+                self.recursive_search_var.set(config.get("recursive", False))
                 self.source_directory_var.set(config.get("source_directory", os.path.expanduser("~")))
                 self.yt_client_secrets_file_var.set(config.get("yt_client_secrets_file", "client_secret.json"))
                 self.upload_batch_limit_var.set(config.get("upload_batch_limit", 100))
@@ -195,6 +197,7 @@ Happy uploading!
             "log_level": self.log_level_var.get(),
             "dry_run": self.dry_run_var.get(),
             "noninteractive": self.noninteractive_var.get(),
+            "recursive": self.recursive_search_var.get(),
             "source_directory": self.source_directory_var.get(),
             "yt_client_secrets_file": self.yt_client_secrets_file_var.get(),
             "input_file_extensions": self.input_file_extensions_var.get(),
@@ -348,6 +351,13 @@ Happy uploading!
         Tooltip(
             noninteractive_checkbutton,
             "Runs the upload process without manual intervention. Enable this once you've tested your settings and you're ready to bulk process!",
+        )
+
+        recursive_checkbutton = tk.Checkbutton(self.general_frame, text="Recursive search", variable=self.recursive_search_var)
+        recursive_checkbutton.grid(row=frame.row, column=2, sticky="w")
+        Tooltip(
+            recursive_checkbutton,
+            "Uses a recursive algorithm over the source directory. This means that the program detects all videos inside any folder in the source directory (as well as in the source directory itself).",
         )
 
         frame.new_row()
@@ -619,6 +629,7 @@ Happy uploading!
 
         dry_run = self.dry_run_var.get()
         noninteractive = self.noninteractive_var.get()
+        recursive_search = self.recursive_search_var.get()
         source_directory = self.source_directory_var.get()
         yt_client_secrets_file = self.yt_client_secrets_file_var.get()
         yt_category_id = self.yt_category_id_var.get()
@@ -644,6 +655,7 @@ Happy uploading!
             logger=self.logger,
             dry_run=dry_run,
             interactive_prompt=not noninteractive,
+            recursive_search=recursive_search,
             stop_event=self.stop_event,
             gui=self,
             source_directory=source_directory,

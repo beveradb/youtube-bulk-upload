@@ -92,13 +92,19 @@ Hover over any element in the user interface for a tooltip popup explanation of 
 
 ## Installation (CLI)
 
-To install YouTube Bulk Upload, ensure you have Python 3.9 or newer installed on your system. You can then install the tool using pip:
+To install YouTube Bulk Upload, ensure you have Python 3.9 or newer installed on your system (Apparently it cannot be older than python 3.12 either). You can then install the tool direclty from github (I didn't bother uploading it on PyPI):
 
 ```bash
-pip install youtube-bulk-upload
+pip install git+https://github.com/IvanInRainbows/your-repo.git
 ```
 
-This command installs the latest version of YouTube Bulk Upload along with its dependencies.
+This command installs the latest (forked) version of YouTube Bulk Upload along with its dependencies.
+
+When using it you might get a ModuleNotFoundError for 'pkg_resources'. This was removed from setuptools in one of the later versions so be sure to install the older version in your venv:
+
+```bash
+python -m pip install "setuptools==81.0.0"
+```
 
 ## Usage (CLI)
 The CLI offers a straightforward way to use YouTube Bulk Upload from your terminal or command prompt.

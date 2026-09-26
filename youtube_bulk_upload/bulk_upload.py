@@ -36,6 +36,7 @@ class YouTubeBulkUpload:
         logger: Optional[logging.Logger] = None,
         dry_run: bool = False,
         interactive_prompt: bool = True,
+        recursive_search: bool = False,
         stop_event: OPTIONAL_ANY = None,
         gui: OPTIONAL_ANY = None,
         source_directory: str = os.getcwd(),
@@ -87,7 +88,7 @@ class YouTubeBulkUpload:
         self.youtube: Any = self.authenticate_youtube(self.logger, youtube_client_secrets_file)
 
         self.logger.info(
-            f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
+            f"YouTubeBulkUpload instantiating, dry_run: {dry_run}, interactive_prompt: {interactive_prompt}, recursive_search: {recursive_search}, source_directory: {source_directory}, input_file_extensions: {input_file_extensions}"
         )
         self.logger.info(f"check_for_duplicate_titles: {check_for_duplicate_titles}")
         self.logger.info(
@@ -131,14 +132,32 @@ class YouTubeBulkUpload:
 
         self.progress_callback_func = progress_callback_func
 
-    def find_input_files(self) -> list[str]:
-        self.logger.info("Finding input video files to upload...")
+        self.recursive_search = recursive_search
 
-        video_files = [
-            os.path.join(self.source_directory, f)
-            for f in os.listdir(self.source_directory)
-            if f.endswith(tuple(self.input_file_extensions))
-        ]
+
+    def find_recursive(self, extension):
+        video_files = []
+        recpath = os.path.join(self.source_directory, extension)
+
+        for f in os.listdir(recpath):
+            if f.endswith(tuple(self.input_file_extensions)):
+                video_files.append(os.path.join(recpath, f))
+            elif os.path.isdir(os.path.join(recpath, f)):
+                video_files += self.find_recursive(extension=os.path.join(extension, f))
+        
+        return video_files
+
+    def find_input_files(self, recursive = False) -> list[str]:
+        self.logger.info("Finding input video files to upload...")
+        video_files = []
+
+        # Iterate over files in the source directory. If the file is a folder, execute recursively (if applicable)
+        for f in os.listdir(self.source_directory):
+            if f.endswith(tuple(self.input_file_extensions)):
+                video_files.append(os.path.join(self.source_directory, f))
+            elif recursive and os.path.isdir(os.path.join(self.source_directory, f)):
+                video_files += self.find_recursive(extension=f)
+
         if not video_files:
             self.logger.error("No video files found in current directory to upload.")
             raise Exception("No video files found in current directory to upload.")
@@ -471,7 +490,7 @@ class YouTubeBulkUpload:
         # Check required input files and parameters exist before proceeding
         self.validate_input_parameters()
 
-        video_files = self.find_input_files()
+        video_files = self.find_input_files(recursive=self.recursive_search)
         uploaded_videos: list[dict[str, str]] = []
         for video_file in video_files:
             # Check if stop_event is set before processing each video
